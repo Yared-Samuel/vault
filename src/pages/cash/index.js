@@ -29,6 +29,7 @@ import {
 } from '@tanstack/react-table';
 import { rankItem } from '@tanstack/match-sorter-utils';
 import { Badge } from '@/components/ui/badge';
+import RejectModal from '@/components/cash/RejectModal';
 // import { hasRole, useRequireRole } from '@/lib/roles';
 
 // Debounce utility
@@ -79,6 +80,9 @@ export default function CashPage() {
   const debouncedGlobalFilter = useDebouncedValue(globalFilterInput, 300);
 
   const [expanded, setExpanded] = useState({});
+
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectTx, setRejectTx] = useState(null);
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -316,95 +320,8 @@ export default function CashPage() {
                 {info.row.original.type !== 'check_payment' && (
                   <button
                     onClick={() => {
-                      toast((t) => {
-                        const [rejectionReason, setRejectionReason] = React.useState('');
-                        return (
-                          <div className="bg-white rounded-xl shadow-lg p-4 min-w-[320px] max-w-xs border border-gray-200">
-                            <div className="flex justify-between items-center mb-2">
-                              <div className="font-semibold text-gray-800">Reject Request</div>
-                              <button
-                              className="text-gray-400 hover:text-gray-700 text-xl cursor-pointer"
-                                onClick={() => toast.dismiss(t)}
-                                aria-label="Close"
-                              >×</button>
-                            </div>
-                            <div className="mb-2 flex items-center gap-2">
-                            <span className="text-2xl font-bold text-green-600">{formatCurrency(info.row.original.amount || info.row.original.suspenceAmount)}</span>
-                              <span className="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full font-semibold">Pending</span>
-                            </div>
-                            <div className="text-xs text-gray-500 mb-2">
-                            {info.row.original.requestedAt ? formatRequestedAt(info.row.original.requestedAt) : ''}
-                            </div>
-                            <div className="divide-y divide-gray-100 mb-3">
-                              <div className="py-1">
-                                <span className="font-semibold text-gray-700">To: </span>
-                              <span>{info.row.original.to || '-'}</span>
-                              </div>
-                              <div className="py-1">
-                                <span className="font-semibold text-gray-700">Reason: </span>
-                              <span>{info.row.original.reason || '-'}</span>
-                              </div>
-                              <div className="py-1">
-                                <span className="font-semibold text-gray-700">Requested By: </span>
-                              <span>{info.row.original.requestedBy?.name || '-'}</span>
-                              </div>
-                              <div className="py-1">
-                                <span className="font-semibold text-gray-700">Type: </span>
-                              <span>{info.row.original.type === 'receipt_payment' ? 'Cash Payment' : info.row.original.type === 'suspence_payment' ? 'Suspence Payment' : info.row.original.type}</span>
-                              </div>
-                            </div>
-                            <div className="mb-3">
-                              <label className="block font-semibold text-gray-700 mb-1">Rejection Reason: <span className="text-red-500">*</span></label>
-                              <textarea
-                                className="w-full border rounded px-2 py-1 text-sm"
-                                placeholder="Please provide a reason for rejection"
-                                value={rejectionReason}
-                                onChange={e => setRejectionReason(e.target.value)}
-                                rows={2}
-                                required
-                              />
-                            </div>
-                            <div className="flex gap-2 justify-end mt-2">
-                              <button
-                              className="px-3 py-1 rounded bg-red-500 text-white font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed cursor-pointer hover:bg-red-700 transition"
-                                disabled={!rejectionReason.trim()}
-                                onClick={async () => {
-                                  if (!rejectionReason.trim()) return;
-                                  try {
-                                    const res = await fetch('/api/transactions', {
-                                      method: 'PATCH',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({
-                                      id: info.row.original._id,
-                                        status: 'rejected',
-                                        rejectedBy: auth?.id,
-                                        rejectedReason: rejectionReason.trim(),
-                                      }),
-                                    });
-                                    const data = await res.json();
-                                    if (data.success) {
-                                      toast.dismiss(t);
-                                      toast.success('Request rejected!');
-                                      // Optionally refresh transactions
-                                      const res = await fetch('/api/transactions');
-                                      const data = await res.json();
-                                      if (data.success) {
-                                        setTransactions(data.data);
-                                      }
-                                    } else {
-                                      toast.error(data.message || 'Failed to reject.');
-                                    }
-                                  } catch (err) {
-                                    toast.error('Failed to reject.');
-                                  }
-                                }}
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      }, { duration: 10000 });
+                      setRejectTx(info.row.original);
+                      setShowRejectModal(true);
                     }}
                     className="ml-2 bg-rose-100 text-rose-600 border border-rose-300  w-6 h-6 rounded-full flex items-center justify-center shadow cursor-pointer hover:bg-rose-500 hover:text-white hover:scale-110 hover:shadow-lg transition"
                     title="Reject"
@@ -736,10 +653,44 @@ export default function CashPage() {
         payDisabled={!selectedCashAccount}
       />
 
+      {/* Reject Modal */}
+      <RejectModal
+        open={showRejectModal}
+        onClose={() => setShowRejectModal(false)}
+        transaction={rejectTx}
+        onSubmit={async (rejectionReason) => {
+          try {
+            const res = await fetch('/api/transactions', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: rejectTx._id,
+                status: 'rejected',
+                rejectedBy: auth?.id,
+                rejectedReason: rejectionReason.trim(),
+              }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              setShowRejectModal(false);
+              toast.success('Request rejected!');
+              // Optionally refresh transactions
+              const res = await fetch('/api/transactions');
+              const data = await res.json();
+              if (data.success) {
+                setTransactions(data.data);
+              }
+            } else {
+              toast.error(data.message || 'Failed to reject.');
+            }
+          } catch (err) {
+            toast.error('Failed to reject.');
+          }
+        }}
+      />
 
-
-            {/* Transaction Detail Modal */}
-            <TransactionDetailModal
+      {/* Transaction Detail Modal */}
+      <TransactionDetailModal
         open={showDetailModal}
         transaction={selectedTransaction}
         onClose={() => setShowDetailModal(false)}

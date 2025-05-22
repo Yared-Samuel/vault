@@ -14,18 +14,16 @@ export function useRequireRole(roles, redirectTo = '/unauthorized') {
   const { auth } = useContext(AuthContext);
   const router = useRouter();
 
-  // Loading state: auth is not yet loaded
-  if (auth === null) {
-    return null; // or you can return a string or a loading boolean
-  }
-
   useEffect(() => {
     if (auth && !hasRole(auth, roles)) {
       router.replace(redirectTo);
     }
   }, [auth, roles, router, redirectTo]);
 
-  // Returns true if authorized, false otherwise
+  if (auth === null) {
+    return null;
+  }
+
   return hasRole(auth, roles);
 }
 
