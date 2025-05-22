@@ -1,9 +1,8 @@
-import connect from "@/lib/db";
-import { getUserModel } from "@/lib/models";
-import { withTenant } from "@/lib/middleware/tenantMiddleware";
+import dbConnect from "@/lib/dbConnect";
+import User from "@/models/User";
+// import { withTenant } from "@/lib/middleware/tenantMiddleware";
 import { sendSuccess, sendError } from "@/lib/utils/responseHandler";
 
-const User = getUserModel();
 
 async function handler(req, res) {
   try {
@@ -13,7 +12,7 @@ async function handler(req, res) {
       return res.status(405).json({ success: false, message: "Method not allowed" });
     }
     
-    await connect();
+    await dbConnect();
     
     // The withTenant middleware decodes the JWT token from the request cookies
     // and adds the decoded user data (id, role, companyId) to req.user

@@ -1,5 +1,5 @@
 import cookie from 'cookie';
-import { withTenant } from "@/lib/middleware/tenantMiddleware";
+// import { withTenant } from "@/lib/middleware/tenantMiddleware";
 
 export const loginStatus = async (req, res) => {
     const cookies = cookie.parse(req.headers.cookie || '');

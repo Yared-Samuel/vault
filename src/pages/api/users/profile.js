@@ -1,6 +1,6 @@
-import connect from "@/lib/db";
-import { getUserModel } from "@/lib/models";
-import { withTenant } from "@/lib/middleware/tenantMiddleware";
+import dbConnect from '@/lib/dbConnect';
+import User from '@/models/User';
+// import { withTenant } from "@/lib/middleware/tenantMiddleware";
 import { sendSuccess, sendError, sendBadRequest } from "@/lib/utils/responseHandler";
 import bcrypt from "bcryptjs";
 
@@ -11,10 +11,10 @@ async function handler(req, res) {
     // The user and company info is added by the tenant middleware
     const { id: userId } = req.user;
     
-    await connect();
+    await dbConnect();
     
     // Get User model from our centralized registry
-    const User = getUserModel();
+
     
     switch (method) {
       case "GET":
