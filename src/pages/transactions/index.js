@@ -267,7 +267,7 @@ export default function TransactionsPage() {
   }
 
     return(
-      <>
+      <div className="flex flex-col w-full">
       <div className="flex justify-between items-center">
       <h1 className="text-2xl font-bold">Rquests</h1>
         <div className="flex gap-2">
@@ -306,6 +306,7 @@ export default function TransactionsPage() {
         createdBy={auth?.id || ''}
         users={users}
         vehicles={vehicles}
+        auth={auth}
       />
     {/* Transaction Detail Modal */}
     <TransactionDetailModal
@@ -313,6 +314,6 @@ export default function TransactionsPage() {
       transaction={selectedTransaction}
       onClose={() => setShowDetailModal(false)}
     />
-      </>
+      </div>
   )
 } 

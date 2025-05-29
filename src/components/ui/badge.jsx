@@ -6,6 +6,10 @@ export function Badge({ className = '', variant = 'default', ...props }) {
   const variants = {
     default: 'bg-primary text-primary-foreground',
     secondary: 'bg-secondary text-secondary-foreground',
+    danger: 'bg-red-600 text-white',
+    warning: 'bg-yellow-600 text-white',
+    info: 'bg-green-700 text-white'
+
   };
   return (
     <span className={cn(base, variants[variant], className)} {...props} />

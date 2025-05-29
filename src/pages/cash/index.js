@@ -30,6 +30,7 @@ import {
 import { rankItem } from '@tanstack/match-sorter-utils';
 import { Badge } from '@/components/ui/badge';
 import RejectModal from '@/components/cash/RejectModal';
+import SuspenceModal from "@/components/cash/SuspenceModal";
 // import { hasRole, useRequireRole } from '@/lib/roles';
 
 // Debounce utility
@@ -66,6 +67,7 @@ export default function CashPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [cashAccounts, setCashAccounts] = useState([]);
   const [payModal, setPayModal] = useState({ open: false, tx: null });
+  const [suspenceModal, setSuspenceModal] = useState({ open: false, tx: null });
   const [selectedCashAccount, setSelectedCashAccount] = useState('');
   const [filter, setFilter] = useState('approved');
 
@@ -234,7 +236,7 @@ export default function CashPage() {
         cell: info => (
           <div className="flex gap-1">
             <button
-              className="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow hover:scale-110 hover:shadow-lg transition cursor-pointer hover:bg-blue-600"
+              className="bg-gray-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow hover:scale-110 hover:shadow-lg transition cursor-pointer hover:bg-gray-800"
               title="View Detail"
               onClick={() => {
                 setSelectedTransaction(info.row.original);
@@ -254,6 +256,7 @@ export default function CashPage() {
                 <Printer className="w-4 h-4" />
               </button>
             )}
+            
             {info.row.original.status !== 'paid' && (
               <>
                 {info.row.original.type !== 'check_payment' && (
@@ -267,6 +270,36 @@ export default function CashPage() {
                   >
                     {/* <CreditCard className="w-5 h-5" /> */}
                     PAY
+                  </button>
+                )}
+                {info.row.original.type === 'suspence_payment' && info.row.original.status == 'approved' && (
+                  <button
+                    onClick={() => {
+                      setSuspenceModal({ open: true, tx: info.row.original });
+                      setSelectedCashAccount('');
+                    }}
+                    className="ml-1 px-2 py-0.5 text-[11px] font-semibold uppercase bg-emerald-600 text-white border border-emerald-700 rounded-md shadow-sm cursor-pointer hover:bg-emerald-700 hover:text-gray-100 hover:border-emerald-800 transition"
+                    title="Pay"
+                  >
+                    {/* <CreditCard className="w-5 h-5" /> */}
+                    SUS
+                  </button>
+                )}
+                {info.row.original.type === 'suspence_payment' && info.row.original.status == 'suspence' && (
+                  <button
+                    onClick={() => {
+                      toast.success('Print Suspence?', {
+                        action: {
+                          label: 'Print Invoice (Copy)',
+                          onClick: () => window.open( `/cash/suspenceInvoice/${info.row.original._id}`, '_blank'),
+                        },
+                      });
+                    }}
+                    className="ml-1 px-2 py-0.5 text-[11px] font-semibold uppercase bg-emerald-600 text-white border border-emerald-700 rounded-md shadow-sm cursor-pointer hover:bg-emerald-700 hover:text-gray-100 hover:border-emerald-800 transition"
+                    title="Pay"
+                  >
+                    {/* <CreditCard className="w-5 h-5" /> */}
+                    Print
                   </button>
                 )}
                 {info.row.original.type !== 'check_payment' && info.row.original.type !== 'suspence_payment' && (
@@ -377,7 +410,7 @@ export default function CashPage() {
   });
 
   return (
-    <>
+    <div className="flex flex-col w-full">
       
       {/* Status Filter and Cash Accounts Badges */}
       <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-2 my-4 w-full">
@@ -653,6 +686,56 @@ export default function CashPage() {
         payDisabled={!selectedCashAccount}
       />
 
+      <SuspenceModal
+        open={suspenceModal.open}
+        tx={suspenceModal.tx}
+        cashAccounts={cashAccounts}
+        selectedCashAccount={selectedCashAccount}
+        onAccountChange={e => setSelectedCashAccount(e.target.value)}
+        onClose={() => {
+          setSuspenceModal({ open: false, tx: null });
+          setSelectedCashAccount('');
+        }}
+        onSuspence={async (fields = {}) => {
+          console.log('SuspenceModal fields:', fields);
+          try {
+            let body = {
+              transactionId: suspenceModal.tx._id,
+              cashAccountId: selectedCashAccount,
+              amount:  fields.newSuspenceAmount,
+              reason: fields.reason,
+            }
+            console.log(body);
+            const res = await fetch('/api/suspence', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            });
+            const data = await res.json();
+            if (data.success) {
+              window.open(`/cash/suspenceInvoice/${suspenceModal.tx._id}`, '_blank');
+              toast.success('Suspence payment successful!', {
+                action: {
+                  label: 'Print Invoice (Copy)',
+                  onClick: () => window.open( `/cash/suspenceInvoice/${suspenceModal.tx._id}`, '_blank'),
+                },
+              });
+              setSuspenceModal({ open: false, tx: null });
+              setSelectedCashAccount('');
+              // Refresh transactions and cash accounts
+              const txRes = await fetch('/api/transactions');
+              const txData = await txRes.json();
+              if (txData.success) setTransactions(txData.data);
+              const caRes = await fetch('/api/cash');
+              const caData = await caRes.json();
+              setCashAccounts(caData);
+            }
+          } catch (error) {
+            toast.error('Suspence payment failed.');
+          }
+        }}
+      />
+
       {/* Reject Modal */}
       <RejectModal
         open={showRejectModal}
@@ -695,6 +778,6 @@ export default function CashPage() {
         transaction={selectedTransaction}
         onClose={() => setShowDetailModal(false)}
       />
-    </>
+    </div>
   );
 } 

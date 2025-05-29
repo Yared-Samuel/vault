@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Users,
 } from "lucide-react";
+import Image from "next/image";
 
 const navItems = [
   {
@@ -90,25 +91,27 @@ export default function AppSidebar({ collapsed, setCollapsed, sidebarOpen, setSi
 
   const closeSidebar = () => setSidebarOpen(false);
 
+  console.log(sidebarOpen)
+
   return (
     <>
       {/* Sidebar */}
       {!collapsed && (
         <aside
           id="logo-sidebar"
-          className={`fixed z-40 h-fit transition-transform bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700 left-0 w-64 top-10 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} sm:translate-x-0 relative transition-all duration-700`}
+          className="relative w-60  h-screen transition-transform -translate-x-full sm:translate-x-0 duration-600 ease-in-out"
           aria-label="Sidebar"
         >
           {/* Collapse button (desktop only) */}
           <button
             type="button"
-            className="hidden sm:flex items-center justify-center absolute top-0 right-0  w-9 h-9 bg-gradient-to-l from-teal-400 to-cyan-500 border-0 rounded-full shadow-lg hover:from-teal-500 hover:to-cyan-600 hover:scale-105 active:scale-95 transition-all duration-300 group z-50 cursor-pointer"
+            className=" flex items-center justify-center absolute top-0  left-45 w-9 h-9 bg-gradient-to-l hover:from-gray-400 hover:to-gray-200 border-0 rounded-full shadow-lg   hover:scale-105 active:scale-95 transition-all duration-300 group z-50 cursor-pointer"
             onClick={() => setCollapsed(true)}
             title="Collapse sidebar"
           >
-            <svg className="w-6 h-6 text-white group-hover:-rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            <Image src="/close-side.svg" alt="expand"  width={20} height={20} />
           </button>
-          <div className="h-full px-3 pb-4 bg-white dark:bg-gray-800 flex flex-col justify-between ">
+          <div className="h-full px-3 pb-8 overflow-y-auto bg-white dark:bg-gray-800 flex flex-col justify-between ">
             <ul className="space-y-2 font-medium">
               {navItems.map((item) => {
                 const Icon = item.icon;
@@ -178,12 +181,12 @@ export default function AppSidebar({ collapsed, setCollapsed, sidebarOpen, setSi
         </aside>
       )}
       {/* Overlay for mobile when sidebar is open */}
-      {sidebarOpen && (
+      {/* {sidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black bg-opacity-30 sm:hidden"
+          className="fixed inset-0 z-30 bg-opacity-30 sm:hidden"
           onClick={closeSidebar}
         />
-      )}
+      )} */}
     </>
   );
 } 

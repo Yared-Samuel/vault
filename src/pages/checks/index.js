@@ -166,7 +166,7 @@ export default function ChecksPage() {
   );
 
   return (
-    <div className="flex justify-center py-8">
+    <div className="flex justify-center w-full">
       <div className="w-full  mx-1">
         <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold mb-6">Check Monitoring</h1>

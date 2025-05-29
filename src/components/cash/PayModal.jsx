@@ -9,7 +9,6 @@ export default function PayModal({ open, tx, cashAccounts, selectedCashAccount, 
   const [receptReference, setReceptReference] = useState('');
   const [localError, setLocalError] = useState('');
   const [uploading, setUploading] = useState(false);
-
   useEffect(() => {
     setRelatedReceiptUrl(tx?.relatedReceiptUrl || '');
     setRelatedReceiptFile(null);
@@ -84,7 +83,7 @@ export default function PayModal({ open, tx, cashAccounts, selectedCashAccount, 
 
   if (!open || !tx) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center  ">
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
         <button className="absolute top-3 right-3 text-gray-500 hover:text-black text-3xl font-bold leading-none cursor-pointer" onClick={onClose} aria-label="Close">&times;</button>
         <h2 className="text-xl font-bold mb-4">Select Cash Account</h2>

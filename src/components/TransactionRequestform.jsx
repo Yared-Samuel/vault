@@ -153,6 +153,7 @@ const TransactionRequestform = ({ open, onClose, form, onChange, onSubmit, creat
                   onChange={handleCommonChange}
                   className="w-full border rounded px-2 py-1 focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition"
                   required
+                  disabled={isTransporter}
                 >
                   <option value="">Select User</option>
                   {users.map(user => (

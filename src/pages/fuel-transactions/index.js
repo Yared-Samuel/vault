@@ -37,6 +37,8 @@ export default function FuelTransactionsPage() {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [columnFilters, setColumnFilters] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [fuelUsage, setFuelUsage] = useState(0);
+  const [filterData, setFilterData] = useState([])
 
   useEffect(() => {
     const fetchFuelTransactions = async () => {
@@ -109,11 +111,14 @@ export default function FuelTransactionsPage() {
     },
   ];
 
-  // Responsive: show cards on mobile, table on desktop
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 700;
+  console.log(fuelUsage)
+  useEffect(()=> {
+    const data = fuelTransaction.filter(f => f.km_lit > fuelUsage);
+    setFilterData(data)
+  },[fuelUsage])
 
   const table = useReactTable({
-    data: fuelTransaction,
+    data: fuelUsage === 0 ? fuelTransaction : filterData,
     columns,
     state: { sorting, pagination, columnFilters },
     onSortingChange: setSorting,
@@ -128,14 +133,15 @@ export default function FuelTransactionsPage() {
   });
 
   return (
-    <div style={{ maxWidth: "100%", margin: "5px auto" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <h2 style={{ fontSize: 20, fontWeight: 400, color: "#1a202c", display: "flex", alignItems: "center", gap: 12, letterSpacing: 1 }}>
-          <Fuel style={{ color: "#3182ce", width: 36, height: 36 }} />
+    <div  className="w-full mx-auto mt-2">
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center sm:text-lg md:text-2xl font-bold text-[#1a202c]  gap-1 " >
+          <Fuel className="w-5 h-5 md:w-10 md:h-10 text-green-800"  />
           Fuel Consumption
         </h2>
-        <Button onClick={() => setShowModal(true)} style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600, fontSize: 16 }}>
-          <Fuel style={{ width: 20, height: 20 }} /> Fuel Pump
+        <input type="number" onChange={(e) => setFuelUsage(e.target.value)} defaultValue={0} className="border border-gray-300 rounded-md " />
+        <Button className="flex items-center gap-2 font-bold text-1xl bg-green-800" onClick={() => setShowModal(true)} >
+          <Fuel style={{ width: 20, height: 20 }} /> <span className="hidden md:block">Fuel Pump</span> 
         </Button>
       </div>
       {showModal && (
@@ -195,7 +201,7 @@ export default function FuelTransactionsPage() {
           .fuel-card-list { display: none !important; }
         }
       `}</style>
-      <div className="fuel-card-list" style={{ display: 'none', marginTop: 16 }}>
+      <div className="fuel-card-list" style={{ display: 'none', marginTop: 8 }}>
         {fuelTransaction.map((tx, idx) => (
           <div key={tx._id || idx} style={{
             background: '#fff',
@@ -215,7 +221,7 @@ export default function FuelTransactionsPage() {
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 2 }}>
               <Badge variant="secondary"><Droplet style={{ width: 14, height: 14, marginRight: 4 }} /> {formatNumber(tx.liters, 2)} Lt</Badge>
-              <Badge variant="secondary"><Gauge style={{ width: 14, height: 14, marginRight: 4 }} /> {formatNumber(tx.km_lit, 2)} KM/L</Badge>
+              <Badge variant="danger" ><Gauge style={{ width: 14, height: 14, marginRight: 4, }} /> {formatNumber(tx.km_lit, 2)} KM/L</Badge>
               <Badge variant="primary"><DollarSign style={{ width: 14, height: 14, marginRight: 4 }} /> {formatNumber(tx.totalCost, 2)}</Badge>
               <Badge variant="secondary"><Gauge style={{ width: 14, height: 14, marginRight: 4 }} /> {formatNumber(tx.odometer, 0)} KM</Badge>
             </div>

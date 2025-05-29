@@ -71,7 +71,7 @@ export default function InvoicePage() {
   const formattedAmount = Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
-    <div className="max-w-2xl mx-auto my-8 bg-white p-10 rounded-xl shadow print:shadow-none print:bg-white print:p-0 relative border border-gray-300 text-gray-900">
+    <div className="max-w-2xl mx-auto my-8  p-10 rounded-xl shadow print:shadow-none print:bg-white print:p-2 relative border border-gray-300 text-gray-900">
       {/* Watermark or label */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none pointer-events-none z-0"
         style={{
@@ -100,8 +100,8 @@ export default function InvoicePage() {
           Email: {company.email}
         </div>
       <div className="text-center font-bold text-lg underline mb-2 tracking-wide">
-        Petty Cash Payment Voucher
-        <span className="block text-xs">የጥቃቅን ወጪ መክፈያ ሰነድ</span>
+        Suspence Payment
+        {/* <span className="block text-xs">የጥቃቅን ወጪ መክፈያ ሰነድ</span> */}
         </div>
       <div className="flex flex-col items-end mb-4">
         <div className="text-xs font-semibold">Date: <span className="font-normal underline min-w-[100px] inline-block">{transaction.requestedAt ? new Date(transaction.requestedAt).toLocaleDateString() : ''}</span></div>
@@ -112,9 +112,8 @@ export default function InvoicePage() {
       {/* Main Info Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mb-4 text-sm">
         <div><span className="font-semibold">Paid To:</span> {transaction.to || '-'}</div>
-        <div><span className="font-semibold">Reference No:</span> {transaction.recept_reference || '-'}</div>
         <div><span className="font-semibold">Reason:</span> {transaction.reason || '-'}</div>
-        <div><span className="font-semibold">Type:</span> {transaction.type === 'receipt_payment' ? 'Cash Payment' : transaction.type === 'suspence_payment' ? 'Suspence Payment' : transaction.type}</div>
+        <div><span className="font-semibold">Type:</span> Suspence Payment</div>
         <div><span className="font-semibold">Vehicle:</span> {transaction.vehicleId?.plate || '-'}</div>
 
         
@@ -123,7 +122,7 @@ export default function InvoicePage() {
       <table className="w-full border text-xs mb-2">
         <thead>
           <tr className="bg-gray-100">
-            <th className="border px-2 py-1">Description</th>
+            <th className="border px-2 py-1">Reason</th>
             <th className="border px-2 py-1">Quantity</th>
             <th className="border px-2 py-1">Amount</th>
           </tr>
@@ -139,45 +138,56 @@ export default function InvoicePage() {
       {/* Amount in words */}
       <div className="text-xs text-right mb-1">Amount in words: <span className="font-semibold italic">{birrToWords(amount)}</span></div>
       {/* Requested By and Approved By */}
-      <div className=" mt-4 text-xs gap-8">
-        <div className=" flex-1">
-          <div className="border-b border-gray-400 min-w-[120px] h-6 flex  text-base font-semibold">
-           {transaction.requestedBy?.name || ''}
-          </div>
-          <div className='flex justify-between'>
-
-          <h4 className="mt-1">Requested By/ Recipient</h4>
-          <h4 className="mt-1">Signature</h4>
-          <h4 className="mt-1">Date</h4>
+      <div className="mt-8 text-xs">
+        <div className="grid grid-cols-3 gap-8">
           
+          {/* Finance Manager */}
+          <div className="flex flex-col items-start">
+            <div className="border-b border-gray-400 min-w-[160px] h-7 flex items-center text-base font-semibold mb-1">
+              Biruk Wubshet
+            </div>
+            <div className="flex flex-col gap-2 w-full">
+              <div className="flex items-center gap-2">
+                <span className="w-24">Finance Manager</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-5">Sign</span>
+                <span className="flex-1 border-b border-gray-400 h-5"></span>
+              </div>
+              
+            </div>
           </div>
-          
-        </div>
-        <div className="flex-1" />
-        <div className=" flex-1">
-          <div className="border-b border-gray-400 min-w-[120px] h-6 flex  text-base font-semibold">
-            {transaction.approvedBy?.name || ''}
+          {/* Approved By */}
+          <div className="flex flex-col items-start">
+            <div className="border-b border-gray-400 min-w-[160px] h-7 flex items-center text-base font-semibold mb-1">
+              {transaction.approvedBy?.name || <span className="text-gray-400">Name</span>}
+            </div>
+            <div className="flex flex-col gap-2 w-full">
+              <div className="flex items-center gap-2">
+                <span className="w-24">Approved By</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-5">Sign</span>
+                <span className="flex-1 border-b border-gray-400 h-5"></span>
+              </div>
+              
+            </div>
           </div>
-          <div className='flex justify-between'>
-          <h4 className="mt-1">Approved By</h4>
-
-          <h4 className="mt-1">Signature</h4>
-          <h4 className="mt-1">Date</h4>
-          
-          </div>
-          
-        </div>
-        {/* Finance Manager Column */}
-        <div className=" flex-1">
-          <div className="border-b border-gray-400 min-w-[120px] h-6 flex  text-base font-semibold">
-            Biruk Wubshet
-          </div>
-          <div className='flex justify-between'>
-          <h4 className="mt-1">Finance Manager</h4>
-
-          <h4 className="mt-1">Signature</h4>
-          <h4 className="mt-1">Date</h4>
-          
+          {/* Requested By/Recipient */}
+          <div className="flex flex-col items-start">
+            <div className="border-b border-gray-400 min-w-[160px] h-7 flex items-center text-base font-semibold mb-1">
+              {transaction.requestedBy?.name || <span className="text-gray-400">Name</span>}
+            </div>
+            <div className="flex flex-col gap-2 w-full">
+              <div className="flex items-center gap-2">
+                <span className="w-40">Requested By/Recipient</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-">Sign</span>
+                <span className="flex-1 border-b border-gray-400 h-5"></span>
+              </div>
+              
+            </div>
           </div>
         </div>
       </div>

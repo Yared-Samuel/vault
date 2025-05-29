@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/dbConnect';
 import FuelTransaction from '@/models/FuelTransaction';
+import Vehicle from '@/models/Vehicle';
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {

@@ -1,5 +1,8 @@
 import dbConnect from '@/lib/dbConnect';
 import Transaction from '@/models/Transaction';
+import Vehicle from '@/models/Vehicle';
+import User from '@/models/User';
+import CheckRequest from '@/models/CheckRequest';
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
