@@ -13,8 +13,8 @@ export default async function handler(req, res) {
         .populate('checkRequestId', 'checkNumber ')
         .populate('createdBy', 'name')
         .populate('requestedBy', 'name')
-        .populate('vehicleId', 'plate')
         .populate('approvedBy', 'name')
+        .populate('vehicleMaintenance.vehicleId', 'plate model');
       return res.status(200).json({ success: true, data: transactions });
     } catch (error) {
       console.error('Error fetching transactions:', error);
@@ -23,27 +23,30 @@ export default async function handler(req, res) {
   } else if (req.method === 'POST') {
     try {
       await dbConnect();
-      const data = req.body;
-      // If using multipart/form-data, parse accordingly (not shown here)
-      console.log(data);
-      if (Array.isArray(data)) {
-        // Handle multiple transactions
-        const transactionsToCreate = data.map(item => {
-          const transactionData = { ...item };
-          if (typeof item.quantity !== 'undefined') transactionData.quantity = Number(item.quantity);
-          if (typeof item.serialNumber !== 'undefined') transactionData.serialNumber = item.serialNumber;
-          return transactionData;
-        });
-        const transactions = await Transaction.insertMany(transactionsToCreate);
-        return res.status(201).json({ success: true, data: transactions });
-      } else {
-        // Single transaction (existing logic)
-        const transactionData = { ...data };
-        if (typeof data.quantity !== 'undefined') transactionData.quantity = Number(data.quantity);
-        if (typeof data.serialNumber !== 'undefined') transactionData.serialNumber = data.serialNumber;
-        const transaction = await Transaction.create(transactionData);
-        return res.status(201).json({ success: true, data: transaction });
-      }
+      const {status, type, reason, requestedBy, requestedAt,  to, amount, suspenceAmount,quantity, recept_reference, vehicleMaintenance} = req.body;
+      
+     if(!status || !type || !requestedBy || !requestedAt ) {
+      return res.status(400).json({ success: false, message: 'Missing required fields.' });
+     }
+
+     
+      const transaction = await Transaction.create({
+        status,
+        type,
+        to,
+        amount,
+        suspenceAmount,
+        reason,
+        quantity,
+        recept_reference,
+        requestedBy,
+        requestedAt,
+        createdBy: requestedBy,
+        vehicleMaintenance
+      })
+
+       await transaction.save();
+      return res.status(201).json({ success: true, data: "done" });
     } catch (error) {
       console.error('Error creating transaction:', error);
       return res.status(500).json({ success: false, message: 'Server error. Could not create transaction.' });

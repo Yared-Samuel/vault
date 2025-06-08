@@ -70,25 +70,23 @@ const Login = () => {
     }
   };
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-100 to-indigo-200 relative overflow-hidden px-2 sm:px-0">
-      {/* Decorative blurred SVG or blob background */}
-      <div className="absolute -top-32 -left-32 w-[300px] h-[300px] sm:w-[500px] sm:h-[500px] bg-blue-300 opacity-20 rounded-full blur-[80px] sm:blur-[120px] z-0"></div>
-      <div className="absolute bottom-0 right-0 w-[200px] h-[200px] sm:w-[400px] sm:h-[400px] bg-indigo-400 opacity-20 rounded-full blur-[60px] sm:blur-[100px] z-0"></div>
-      {isLoading ? (
+   
+      
+        <div className=" min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-100 to-indigo-200 relative overflow-hidden px-2 sm:px-0">
+          <div className="w-full max-w-xs sm:max-w-md mx-auto bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200 px-4  sm:px-8 py-6 md:py-8 flex flex-col items-center animate-fadeInUp">
+            <Image src="/logo/Vault Logo.svg" alt="logo" width={100} height={100} className="mb-4" />
+            {isLoading ? (
         <LoadingComponent />
       ) : (
-        <div className="relative z-10 w-full max-w-xs sm:max-w-md mx-auto">
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200 px-4 py-8 sm:px-8 sm:py-10 flex flex-col items-center animate-fadeInUp">
-            <h2 className="text-2xl font-bold mb-4">Vault Login</h2>
             <form onSubmit={handleLogin} className="space-y-6 w-full">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                   Email
                   <span className={validEmail ? "inline-block ml-1" : "hidden"}>
-                    <Image src="/icons/checked-circle.svg" alt="info" width={18} height={18} />
+                    <Image src="/icons/checked-green.svg" alt="info" width={18} height={18} />
                   </span>
                   <span className={validEmail || !email ? "hidden" : "inline-block ml-1"}>
-                    <Image src="/icons/danger-red.svg" alt="info" width={18} height={18} />
+                    <Image src="/icons/not-right.svg" alt="info" width={14} height={14} />
                   </span>
                 </label>
                 <input
@@ -110,7 +108,7 @@ const Login = () => {
                       : "hidden"
                   }
                 >
-                  <Image src="/icons/info-circle.svg" alt="info" width={20} height={20} />
+                  <Image src="/icons/danger-triangle.svg" alt="info" width={20} height={20} />
                   Not valid Email!
                 </p>
               </div>
@@ -139,16 +137,16 @@ const Login = () => {
               <div className="flex justify-center mt-6">
                 <button
                   type="submit"
-                  className="w-1/2 sm:w-1/3 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-blue-500 text-white font-semibold text-lg shadow-md hover:from-indigo-600 hover:to-blue-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  className="w-1/2 sm:w-1/3 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-blue-500 text-white font-semibold text-lg shadow-md hover:from-indigo-600 hover:to-blue-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
                 >
                   Login
                 </button>
               </div>
             </form>
+            )}
           </div>
         </div>
-      )}
-    </div>
+      
   );
 };
 

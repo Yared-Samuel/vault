@@ -17,8 +17,7 @@ const TransactionSchema = new Schema(
       type: String,
       enum: transactionTypesModel,
       required: true,
-    },
-    
+    },    
     amount: { type: Number, default: 0 },
     to: { type: String  },
     reason: { type: String },
@@ -58,11 +57,19 @@ const TransactionSchema = new Schema(
     rejectedAt: { type: Date },
     rejectedReason: { type: String },
 
-    // For Transporter
-    vehicleId: { type: Schema.Types.ObjectId, ref: "Vehicle" },
+    
     // when status is paid
     serialNumber: { type: Number, unique: true, sparse: true },
-    quantity: { type: Number },
+    quantity: { type: Number , default: 1},
+
+    // For transporter only
+    vehicleMaintenance: [
+      {
+        vehicleId: { type: Schema.Types.ObjectId, ref: "Vehicle" },
+        description: { type: String },
+        amount: { type: Number },
+      }
+    ]
 
   },
   { timestamps: true }

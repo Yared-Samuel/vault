@@ -243,13 +243,7 @@ export default function TransactionsPage() {
     }
   }
 
-  function openModal() {
-    setForm(f => ({
-      ...f,
-      requestedBy: auth?.id || '',
-    }));
-    setShowModal(true);
-  }
+
 
   function formatCurrency(amount) {
     if (typeof amount !== 'number') return '-';
@@ -271,7 +265,7 @@ export default function TransactionsPage() {
       <div className="flex justify-between items-center">
       <h1 className="text-2xl font-bold">Rquests</h1>
         <div className="flex gap-2">
-        <Button onClick={openModal}>Make Request</Button>
+        <Button onClick={() => router.push('/transactions/new')}>Make Request</Button>
         <RequireRole roles={["accountant", "admin"]} >
         <Button onClick={() => router.push('/checks')}>Check Followup</Button>
         </RequireRole>
@@ -296,18 +290,7 @@ export default function TransactionsPage() {
         transactionStatusesModel={transactionStatusesModel}
 
       />
-      <TransactionRequestform
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        form={form}
-        onChange={handleChange}
-        onSubmit={handleSubmit}
-        checkRequests={checkRequests}
-        createdBy={auth?.id || ''}
-        users={users}
-        vehicles={vehicles}
-        auth={auth}
-      />
+      
     {/* Transaction Detail Modal */}
     <TransactionDetailModal
       open={showDetailModal}

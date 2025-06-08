@@ -32,4 +32,4 @@ export const transactionStatusesModel = ["requested", "approved", "suspence", "p
 
 export const userRoles = ["admin", "accountant", "cashier", "purchaser", "owner", "transporter"]
 
-export const fuelPrice = [{type: "Benzin", price: 100}, {type: "Nafta", price: 150}]
+export const fuelPrice = [{type: "Benzin", price: 122.53}, {type: "Nafta", price: 120.90}]

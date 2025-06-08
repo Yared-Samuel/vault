@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import TransactionRequestform from '@/components/TransactionRequestform';
 import { useRouter } from 'next/router';
 import { BadgeSecondary } from '@/components/ui/badge';
-import { Eye, X, CreditCard, Ban, Printer } from 'lucide-react';
+import { Eye, X, CreditCard, Ban, Printer, Check, ListPlus, ListX, Ellipsis } from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster } from 'sonner';
 import React from 'react';
@@ -15,6 +15,7 @@ import RejectButton from '@/components/toasts/reject';
 import ApproveButton from '@/components/toasts/approve';
 import PayButton from '@/components/toasts/pay';
 import CheckButton from '@/components/toasts/check';
+
 import {
   useReactTable,
   getCoreRowModel,
@@ -31,6 +32,7 @@ import { rankItem } from '@tanstack/match-sorter-utils';
 import { Badge } from '@/components/ui/badge';
 import RejectModal from '@/components/cash/RejectModal';
 import SuspenceModal from "@/components/cash/SuspenceModal";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 // import { hasRole, useRequireRole } from '@/lib/roles';
 
 // Debounce utility
@@ -73,7 +75,6 @@ export default function CashPage() {
 
   // TanStack Table feature states
   const [sorting, setSorting] = useState([]);
-  const [globalFilter, setGlobalFilter] = useState('');
   const [columnVisibility, setColumnVisibility] = useState({});
   const [columnSizing, setColumnSizing] = useState({});
   const [rowSelection, setRowSelection] = useState({});
@@ -154,10 +155,10 @@ export default function CashPage() {
         row.getCanExpand() ? (
           <button
             onClick={row.getToggleExpandedHandler()}
-            className="flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition"
+            className="flex items-center justify-between w-6 h-6 rounded hover:bg-muted transition cursor-pointer"
             title={row.getIsExpanded() ? 'Collapse' : 'Expand'}
           >
-            {row.getIsExpanded() ? '▼' : '▶'}
+            {row.getIsExpanded() ? <ListX /> : <ListPlus />}
           </button>
         ) : null,
       size: 32,
@@ -169,13 +170,22 @@ export default function CashPage() {
     const rest = [
       {
         header: 'To',
-        accessorKey: 'to',
-        
+        accessorKey: 'to',        
         enableResizing: true,
+        size: 48,
+      },
+      {
+        header: 'Reason',
+        accessorKey: 'reason',        
+        enableResizing: true,
+        size: 48,
       },
       {
         header: 'Amount',
         accessorKey: 'amount',
+        size: 48,
+        minSize: 40,
+        maxSize: 56,
         cell: info => (
           <span className="font-bold text-green-700">
             {formatCurrency(info.row.original.amount || info.row.original.suspenceAmount)}
@@ -183,24 +193,32 @@ export default function CashPage() {
         ),
         enableResizing: true,
       },
-      
       {
-        header: 'Requested By',
-        accessorKey: 'requestedBy',
-        cell: info => info.row.original.requestedBy?.name || '-',
+        header: 'Quantity',
+        accessorKey: 'quantity',
+        size: 48,
+        minSize: 40,
+        maxSize: 56,
+        cell: info => info.row.original.quantity || '-',
         enableResizing: true,
       },
       
       {
         header: 'Date',
         accessorKey: 'requestedAt',
+        size: 48,
+        minSize: 40,
+        maxSize: 56,
         cell: info => formatRequestedAt(info.row.original.requestedAt),
         enableResizing: true,
       },
       
       {
-        header: 'Type / Ref',
-        accessorKey: 'typeRef',
+        header: 'Type',
+        accessorKey: 'type',
+        size: 48,
+        minSize: 32,
+        maxSize: 48,
         cell: info => (
           <div>
             <div>{info.row.original.type === 'receipt_payment'
@@ -209,16 +227,42 @@ export default function CashPage() {
               ? 'Suspence Payment'
               : info.row.original.type}
               </div>
+        </div>
+        ),
+        enableResizing: true,
+      },
+      {
+        header: 'Reference',
+        accessorKey: 'recept_reference',
+        size: 48,
+        minSize: 40,
+        maxSize: 56,
+        cell: info => (
+          <div>
+            
             <div>{info.row.original.recept_reference ?? ''}</div>
         </div>
         ),
         enableResizing: true,
       },
       {
+        header: 'Requested By',
+        accessorKey: 'requestedBy',
+        size: 48,
+        minSize: 40,
+        maxSize: 56,
+        cell: info => info.row.original.requestedBy?.name || '-',
+        enableResizing: true,
+      },
+      
+      {
         header: 'Status',
         accessorKey: 'status',
+        size: 48,
+        minSize: 40,
+        maxSize: 56,
         cell: info => (
-          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+          <span className={` text-xs font-semibold ${
             info.row.original.status === 'paid'
               ? 'bg-green-100 text-green-700'
               : info.row.original.status === 'rejected'
@@ -233,78 +277,51 @@ export default function CashPage() {
       {
         header: 'Actions',
         accessorKey: 'actions',
+        size: 48,
+        minSize: 40,
+        maxSize: 56,
         cell: info => (
-          <div className="flex gap-1">
-            <button
-              className="bg-gray-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow hover:scale-110 hover:shadow-lg transition cursor-pointer hover:bg-gray-800"
-              title="View Detail"
-              onClick={() => {
-                setSelectedTransaction(info.row.original);
-                setShowDetailModal(true);
-              }}
-            >
-              <Eye className="w-4 h-4" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-1 rounded hover:bg-muted transition cursor-pointer" title="Actions">
+            <Ellipsis />
             </button>
-            {info.row.original.status === 'paid' && (
-              <button
-                className="ml-2 bg-gray-100 text-gray-700 border border-gray-300 w-6 h-6 rounded-full flex items-center justify-center shadow cursor-pointer hover:bg-gray-500 hover:text-white hover:scale-110 hover:shadow-lg transition"
-                title="Print Invoice"
-                onClick={() => {
-                  window.open(`/cash/invoice/${info.row.original._id}`, '_blank');
-                }}
-              >
-                <Printer className="w-4 h-4" />
-              </button>
-            )}
-            
-            {info.row.original.status !== 'paid' && (
-              <>
-                {info.row.original.type !== 'check_payment' && (
-                  <button
-                    onClick={() => {
-                      setPayModal({ open: true, tx: info.row.original });
-                      setSelectedCashAccount('');
-                    }}
-                    className="ml-2 text-xs bg-green-100 text-green-700 border border-green-300  w-6 h-6 rounded-full flex items-center justify-center shadow cursor-pointer hover:bg-green-500 hover:text-white hover:scale-110 hover:shadow-lg transition"
-                    title="Pay"
-                  >
-                    {/* <CreditCard className="w-5 h-5" /> */}
-                    PAY
-                  </button>
-                )}
-                {info.row.original.type === 'suspence_payment' && info.row.original.status == 'approved' && (
-                  <button
-                    onClick={() => {
-                      setSuspenceModal({ open: true, tx: info.row.original });
-                      setSelectedCashAccount('');
-                    }}
-                    className="ml-1 px-2 py-0.5 text-[11px] font-semibold uppercase bg-emerald-600 text-white border border-emerald-700 rounded-md shadow-sm cursor-pointer hover:bg-emerald-700 hover:text-gray-100 hover:border-emerald-800 transition"
-                    title="Pay"
-                  >
-                    {/* <CreditCard className="w-5 h-5" /> */}
-                    SUS
-                  </button>
-                )}
-                {info.row.original.type === 'suspence_payment' && info.row.original.status == 'suspence' && (
-                  <button
-                    onClick={() => {
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => { setSelectedTransaction(info.row.original); setShowDetailModal(true); }}>
+                <Eye className="w-4 h-4 mr-2" /> View Detail
+              </DropdownMenuItem>
+              {info.row.original.status === 'paid' && (
+                <DropdownMenuItem onClick={() => window.open(`/cash/invoice/${info.row.original._id}`, '_blank')}>
+                  <Printer className="w-4 h-4 mr-2" /> Print Invoice
+                </DropdownMenuItem>
+              )}
+              {info.row.original.status !== 'paid' && (
+                <>
+                  {info.row.original.type !== 'check_payment' && (
+                    <DropdownMenuItem onClick={() => { setPayModal({ open: true, tx: info.row.original }); setSelectedCashAccount(''); }}>
+                      <Check  className="w-4 h-4 mr-2" /> Pay
+                    </DropdownMenuItem>
+                  )}
+                  {info.row.original.type === 'suspence_payment' && info.row.original.status == 'approved' && (
+                    <DropdownMenuItem onClick={() => { setSuspenceModal({ open: true, tx: info.row.original }); setSelectedCashAccount(''); }}>
+                      <CreditCard className="w-4 h-4 mr-2" /> Suspence Pay
+                    </DropdownMenuItem>
+                  )}
+                  {info.row.original.type === 'suspence_payment' && info.row.original.status == 'suspence' && (
+                    <DropdownMenuItem onClick={() => {
                       toast.success('Print Suspence?', {
                         action: {
                           label: 'Print Invoice (Copy)',
-                          onClick: () => window.open( `/cash/suspenceInvoice/${info.row.original._id}`, '_blank'),
+                          onClick: () => window.open(`/cash/suspenceInvoice/${info.row.original._id}`, '_blank'),
                         },
                       });
-                    }}
-                    className="ml-1 px-2 py-0.5 text-[11px] font-semibold uppercase bg-emerald-600 text-white border border-emerald-700 rounded-md shadow-sm cursor-pointer hover:bg-emerald-700 hover:text-gray-100 hover:border-emerald-800 transition"
-                    title="Pay"
-                  >
-                    {/* <CreditCard className="w-5 h-5" /> */}
-                    Print
-                  </button>
-                )}
-                {info.row.original.type !== 'check_payment' && info.row.original.type !== 'suspence_payment' && (
-                  <CheckButton
-                    onCheck={() => {
+                    }}>
+                      <Printer className="w-4 h-4 mr-2" /> Print Suspence Invoice
+                    </DropdownMenuItem>
+                  )}
+                  {info.row.original.type !== 'check_payment' && info.row.original.type !== 'suspence_payment' && (
+                    <DropdownMenuItem onClick={() => {
                       toast((t) => (
                         <div className="bg-white rounded-xl shadow-lg p-4 min-w-[320px] max-w-xs border border-gray-200">
                           <div className="font-semibold text-gray-800 mb-2">Are you sure you want to convert this transaction to check payment?</div>
@@ -345,26 +362,19 @@ export default function CashPage() {
                           </div>
                         </div>
                       ), { duration: 10000 });
-                    }}
-                    className="ml-2"
-                    title="Convert to Check Payment"
-                  />
-                )}
-                {info.row.original.type !== 'check_payment' && (
-                  <button
-                    onClick={() => {
-                      setRejectTx(info.row.original);
-                      setShowRejectModal(true);
-                    }}
-                    className="ml-2 bg-rose-100 text-rose-600 border border-rose-300  w-6 h-6 rounded-full flex items-center justify-center shadow cursor-pointer hover:bg-rose-500 hover:text-white hover:scale-110 hover:shadow-lg transition"
-                    title="Reject"
-                  >
-                    <Ban className="w-4 h-4" />
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+                    }}>
+                      <CreditCard className="w-4 h-4 mr-2" /> To Check
+                    </DropdownMenuItem>
+                  )}
+                  {info.row.original.type !== 'check_payment' && (
+                    <DropdownMenuItem onClick={() => { setRejectTx(info.row.original); setShowRejectModal(true); }}>
+                      <Ban className="w-4 h-4 mr-2" /> Reject
+                    </DropdownMenuItem>
+                  )}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
         enableResizing: false,
       },
@@ -477,15 +487,14 @@ export default function CashPage() {
         </div>
       )}
       {/* Table with shadcn/ui theme */}
-      <div className="overflow-x-auto mt-2 bg-card border border-border rounded-lg shadow-sm px-4 py-2">
-        <table className="min-w-[900px] w-full text-sm text-foreground">
+        <table className="w-full text-sm text-foreground font-[Roboto,Arial,sans-serif] p-1">
           <thead>
             {table.getHeaderGroups().map(headerGroup => (
-              <tr key={headerGroup.id} className="bg-muted text-muted-foreground font-semibold">
+              <tr key={headerGroup.id} className=" text-black font-bold bg-gray-100">
                 {headerGroup.headers.map(header => (
                   <th
                     key={header.id}
-                    className="p-0 cursor-pointer select-none relative group border-b border-border"
+                    className="p-2 text-sm cursor-pointer select-none relative group border border-gray-600 "
                     style={{ width: header.getSize(), minWidth: header.column.columnDef.minSize, maxWidth: header.column.columnDef.maxSize }}
                     onClick={header.column.getToggleSortingHandler()}
                   >
@@ -515,35 +524,64 @@ export default function CashPage() {
               <React.Fragment key={row.id}>
                 <tr
                   className={
-                    `border-b border-border transition ` +
+                    `border border-border transition ` +
                     (row.getIsSelected()
-                      ? 'bg-accent'
+                      ? 'bg-white'
                       : row.index % 2 === 0
-                        ? 'bg-card'
-                        : 'bg-muted/60 hover:bg-muted')
+                        ? 'bg-white'
+                        : 'bg-[#F5F5F5] hover:bg-muted')
                   }
                 >
                   {row.getVisibleCells().map(cell => (
-                    <td key={cell.id} className="p-0">
+                    <td key={cell.id} className="pl-1 align-bottom border border-gray-400">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
                 </tr>
                 {row.getIsExpanded() && (
                   <tr>
-                    <td colSpan={row.getVisibleCells().length} className="bg-muted/50 p-2">
+                    <td colSpan={row.getVisibleCells().length} className="bg-white px-10">
+                      
+                      {Array.isArray(row.original.vehicleMaintenance) && row.original.vehicleMaintenance.length > 0 ? (
+                        <div className="w-full overflow-x-auto">
+                          <table className="w-full text-sm border border-gray-200 bg-white font-[Roboto,Arial,sans-serif]">
+                            <thead className="bg-gray-100">
+                              <tr>
+                                <th className="px-2 py-1 border border-gray-400 text-left">Plate</th>
+                                <th className="px-2 py-1 border border-gray-400 text-left">Model</th>
+                                <th className="px-2 py-1 border border-gray-400 text-left">Description</th>
+                                <th className="px-2 py-1 border border-gray-400 text-left">Amount</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {row.original.vehicleMaintenance.map((vm, idx) => (
+                                <tr key={vm._id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                  <td className="px-2 py-1 border-r border-b border-gray-300">{vm.vehicleId?.plate || '-'}</td>
+                                  <td className="px-2 py-1 border-r border-b border-gray-300">{vm.vehicleId?.model || '-'}</td>
+                                  <td className="px-2 py-1 border-r border-b border-gray-300">{vm.description || '-'}</td>
+                                  <td className="px-2 py-1 border-r border-b border-gray-300">{formatCurrency(vm.amount)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">No vehicle maintenance records.</span>
+                      )}
+
                       {/* Custom expanded content for the row */}
-                      <div className="my-2 mx-2 p-4 rounded-lg bg-white shadow border flex flex-wrap gap-3 items-center min-h-[56px]">
+                      <div className="mx-2 px-2 rounded-lg   flex flex-wrap gap-5 items-center ">
                         <div className="w-full mb-2 text-sm font-bold text-gray-700 flex items-center gap-2">
                           <span className="inline-block w-1.5 h-4 bg-primary rounded-full mr-2"></span>
-                          Transaction Details
+                          {row.original.reason} 
+                          <span className="inline-block w-1.5 h-4 bg-primary rounded-full mr-2"></span>
+                          Quantity: {row.original.quantity}
+                          <span className="inline-block w-1.5 h-4 bg-primary rounded-full mr-2"></span>
+                          Suspence: {row.original.suspenceAmount}
+                          <span className="inline-block w-1.5 h-4 bg-primary rounded-full mr-2"></span>
+                          Return: {row.original.returnAmount}
                         </div>
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-800 border border-blue-200"><span className="font-semibold">Plate:</span> {row.original.vehicleId?.plate || '-'}</Badge>
-                        <Badge variant="secondary" className="bg-green-100 text-green-800 border border-green-200"><span className="font-semibold">Reason:</span> {row.original.reason || '-'}</Badge>
-                        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border border-yellow-200"><span className="font-semibold">Quantity:</span> {row.original.quantity || '-'}</Badge>
-                        <Badge variant="secondary" className="bg-purple-100 text-purple-800 border border-purple-200"><span className="font-semibold">Date:</span> {formatRequestedAt(row.original.requestedAt)}</Badge>
-                        <Badge variant="secondary" className="bg-pink-100 text-pink-800 border border-pink-200"><span className="font-semibold">Suspence:</span> {row.original.suspenceAmount ?? '-'}</Badge>
-                        <Badge variant="secondary" className="bg-red-100 text-red-800 border border-red-200"><span className="font-semibold">Return:</span> {row.original.returnAmount ?? '-'}</Badge>
+                        
                       </div>
                     </td>
                   </tr>
@@ -552,7 +590,6 @@ export default function CashPage() {
             ))}
           </tbody>
         </table>
-              </div>
       {/* Pagination Controls with shadcn/ui theme */}
       <div className="flex items-center gap-2 mt-4 flex-wrap bg-card border border-border rounded-md shadow-sm px-4 py-2">
         <div className="flex items-center gap-1">
@@ -642,6 +679,7 @@ export default function CashPage() {
               cashAccountId: selectedCashAccount,
               type: payModal.tx.type,
               recept_reference: fields.recept_reference,
+              vehicleMaintenance: fields.vehicleMaintenance,
             };
             if (payModal.tx.type === 'receipt_payment') {
               body.relatedReceiptUrl = fields.relatedReceiptUrl;

@@ -106,7 +106,7 @@ export default function InvoicePage() {
       <div className="flex flex-col items-end mb-4">
         <div className="text-xs font-semibold">Date: <span className="font-normal underline min-w-[100px] inline-block">{transaction.requestedAt ? new Date(transaction.requestedAt).toLocaleDateString() : ''}</span></div>
         {transaction.serialNumber && (
-          <div className="text-xs font-semibold">NO: <span className="font-mono text-base">{transaction.serialNumber}</span></div>
+          <div className="text-xs font-semibold">CPV No: <span className="font-mono text-base">{transaction.serialNumber}</span></div>
         )}
       </div>
       {/* Main Info Grid */}
@@ -120,7 +120,33 @@ export default function InvoicePage() {
         
       </div>
       {/* Table for clarity */}
-      <table className="w-full border text-xs mb-2">
+      {transaction.vehicleMaintenance && transaction.vehicleMaintenance.length > 0 ? (
+      
+       
+        <table className="w-full border text-xs mb-2">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border px-2 py-1">Vehicle</th>
+              <th className="border px-2 py-1">Description</th>
+              <th className="border px-2 py-1">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {transaction.vehicleMaintenance.map((item) => (
+              <tr key={item._id}>
+                <td className="border px-2 py-1 min-w-[120px]">
+                  {item.vehicleId?.plate}
+                </td>
+                <td className="border px-2 py-1 min-w-[120px]">{item.description}</td>
+                <td className="border px-2 py-1 min-w-[80px] text-right">{item.amount}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      
+
+      ) : (
+        <table className="w-full border text-xs mb-2">
         <thead>
           <tr className="bg-gray-100">
             <th className="border px-2 py-1">Description</th>
@@ -136,6 +162,8 @@ export default function InvoicePage() {
           </tr>
         </tbody>
       </table>
+      )}
+      
       {/* Amount in words */}
       <div className="text-xs text-right mb-1">Amount in words: <span className="font-semibold italic">{birrToWords(amount)}</span></div>
       {/* Requested By and Approved By */}

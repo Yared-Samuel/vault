@@ -1,10 +1,18 @@
 import React from 'react';
-import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, flexRender } from '@tanstack/react-table';
+import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, getExpandedRowModel, flexRender } from '@tanstack/react-table';
 import ApproveButton from '@/components/butons/ApproveButton';
 import RejectButton from '@/components/butons/RejectButton';
 import ViewMoreButton from '@/components/butons/ViewMoreButton';
 import PrintButton from '@/components/toasts/print';
 import { RequireRole } from '@/lib/roles';
+import { ListPlus, ListX } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
+} from '@/components/ui/dropdown-menu';
+import { Ellipsis, Eye, Check, Ban } from 'lucide-react';
 
 const TransactionTable = ({
   transactions,
@@ -28,6 +36,8 @@ const TransactionTable = ({
   const [sorting, setSorting] = React.useState([]);
   // Pagination state
   const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 10 });
+  // Expand state
+  const [expanded, setExpanded] = React.useState({});
 
   // Filter transactions based on filter prop and global search
   const filteredTransactions = React.useMemo(() => {
@@ -46,25 +56,47 @@ const TransactionTable = ({
   // Define columns for TanStack Table
   const columns = React.useMemo(() => [
     {
-      header: 'To / Reason',
-      accessorKey: 'toReason',
+      id: 'expander',
+      header: '',
+      size: 32,
+      cell: ({ row }) =>
+        row.original.vehicleMaintenance && row.original.vehicleMaintenance.length > 0 ? (
+          <button
+            className="text-blue-600 hover:text-blue-900 focus:outline-none"
+            onClick={() => row.toggleExpanded()}
+            aria-label={row.getIsExpanded() ? 'Collapse' : 'Expand'}
+          >
+            {row.getIsExpanded() ? <ListX /> : <ListPlus />}
+          </button>
+        ) : null,
       enableSorting: false,
-      cell: ({ row }) => (
-        <>
-          <div><span className="font-semibold">To:</span> {row.original.to || '-'}</div>
-          <div><span className="font-semibold">Reason:</span> {row.original.reason || '-'}</div>
-        </>
-      ),
+    },
+    {
+      header: 'To',
+      accessorKey: 'to',
+      enableSorting: false,
+      size: 48,
+      minSize: 40,
+      maxSize: 56,
+    },
+    {
+      header: 'Reason',
+      accessorKey: 'reason',
+      enableSorting: false,
+      
     },
     {
       header: 'Amount',
       accessorKey: 'amount',
+      size: 48,
+        minSize: 40,
+        maxSize: 56,
       cell: ({ row }) => (
         typeof (row.original.amount || row.original.suspenceAmount) === 'number' ? (
-          <span className="inline-block bg-green-500 text-white px-3 py-1 rounded-full font-semibold">
+          <span className="font-bold text-green-700">
             {formatCurrency(row.original.amount || row.original.suspenceAmount)}
           </span>
-        ) : '-'
+        ) : <span className="text-gray-400">-</span>
       ),
       sortingFn: (a, b) => {
         const aVal = a.original.amount || a.original.suspenceAmount || 0;
@@ -75,14 +107,22 @@ const TransactionTable = ({
     {
       header: 'Type',
       accessorKey: 'type',
+      size: 48,
+        minSize: 40,
+        maxSize: 56,
       cell: ({ row }) => (
-        row.original.type === 'receipt_payment' ? 'Cash Payment' : row.original.type === 'suspence_payment' ? 'Suspence Payment' : row.original.type
+        <span className="text-xs font-semibold px-2 rounded bg-blue-50 text-blue-800">
+          {row.original.type === 'receipt_payment' ? 'Cash Payment' : row.original.type === 'suspence_payment' ? 'Suspence Payment' : row.original.type}
+        </span>
       ),
     },
     {
       header: 'Requested By',
       accessorKey: 'requestedBy',
-      cell: ({ row }) => row.original.requestedBy?.name || '-',
+      size: 48,
+        minSize: 40,
+        maxSize: 56,
+      cell: ({ row }) => <span className="text-gray-800 font-medium">{row.original.requestedBy?.name || '-'}</span>,
       sortingFn: (a, b) => {
         const aName = a.original.requestedBy?.name || '';
         const bName = b.original.requestedBy?.name || '';
@@ -92,7 +132,10 @@ const TransactionTable = ({
     {
       header: 'Requested At',
       accessorKey: 'requestedAt',
-      cell: ({ row }) => formatRequestedAt(row.original.requestedAt),
+      size: 48,
+        minSize: 40,
+        maxSize: 56,
+      cell: ({ row }) => <span className="text-gray-600">{formatRequestedAt(row.original.requestedAt)}</span>,
       sortingFn: (a, b) => {
         const aDate = new Date(a.original.requestedAt).getTime();
         const bDate = new Date(b.original.requestedAt).getTime();
@@ -103,23 +146,25 @@ const TransactionTable = ({
       header: 'Actions',
       id: 'actions',
       enableSorting: false,
+      size: 48,
+      minSize: 40,
+      maxSize: 56,
       cell: ({ row }) => {
         const tx = row.original;
         return (
-          <div className="flex flex-row gap-2">
-            <div className="relative group">
-              <ViewMoreButton
-                onView={() => { setSelectedTransaction(tx); setShowDetailModal(true); }}
-              />
-              <span className="absolute left-1/2 -translate-x-1/2 -top-8 bg-blue-600 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-10 whitespace-nowrap">
-                View Detail
-              </span>
-            </div>
-            {tx.status !== 'approved' && (
-              <div className="relative group">
-                <RequireRole roles={["purchaser", "admin"]}>
-                <ApproveButton
-                  onApprove={() => {
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-1 rounded hover:bg-muted transition cursor-pointer" title="Actions">
+                <Ellipsis />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => { setSelectedTransaction(tx); setShowDetailModal(true); }}>
+                <Eye className="w-4 h-4 mr-2" /> View Detail
+              </DropdownMenuItem>
+              {tx.status !== 'approved' && (
+                <DropdownMenuItem
+                  onClick={() => {
                     toast((t) => (
                       <div className="bg-white rounded-xl shadow-lg p-4 min-w-[320px] max-w-xs border border-gray-200">
                         <div className="flex justify-between items-center mb-2">
@@ -188,17 +233,13 @@ const TransactionTable = ({
                       </div>
                     ), { duration: 10000 });
                   }}
-                />
-                </RequireRole>
-                <span className="absolute left-1/2 -translate-x-1/2 -top-8 bg-green-600 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-10 whitespace-nowrap">
-                  Approve
-                </span>
-              </div>
-            )}
-            {tx.status !== 'rejected' && (
-              <div className="relative group">
-                <RejectButton
-                  onReject={() => {
+                >
+                  <Check className="w-4 h-4 mr-2" /> Approve
+                </DropdownMenuItem>
+              )}
+              {tx.status !== 'rejected' && (
+                <DropdownMenuItem
+                  onClick={() => {
                     toast((t) => {
                       const [rejectionReason, setRejectionReason] = React.useState('');
                       return (
@@ -289,13 +330,12 @@ const TransactionTable = ({
                       );
                     }, { duration: 10000 });
                   }}
-                />
-                <span className="absolute left-1/2 -translate-x-1/2 -top-8 bg-red-600 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-10 whitespace-nowrap">
-                  Reject
-                </span>
-              </div>
-            )}
-          </div>
+                >
+                  <Ban className="w-4 h-4 mr-2" /> Reject
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         );
       },
     },
@@ -305,14 +345,17 @@ const TransactionTable = ({
   const table = useReactTable({
     data: filteredTransactions,
     columns,
-    state: { sorting, pagination },
+    state: { sorting, pagination, expanded },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
+    onExpandedChange: setExpanded,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
     manualPagination: false,
     pageCount: Math.ceil(filteredTransactions.length / pagination.pageSize),
+    getRowCanExpand: row => !!(row.original.vehicleMaintenance && row.original.vehicleMaintenance.length > 0),
   });
 
   return (
@@ -365,39 +408,101 @@ const TransactionTable = ({
         <div className="overflow-x-auto mt-4">
           {/* Responsive Table: Table for md+ screens, Cards for <md */}
           <div className="hidden md:block">
-            <table className="min-w-full border text-sm">
-              <thead>
-                {table.getHeaderGroups().map(headerGroup => (
-                  <tr key={headerGroup.id} className="bg-gray-100">
-                    {headerGroup.headers.map(header => (
-                      <th
-                        key={header.id}
-                        className="px-2 py-1 border cursor-pointer select-none"
-                        onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
-                      >
-                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                        {header.column.getCanSort() && (
-                          <span className="ml-1">
-                            {header.column.getIsSorted() === 'asc' ? '▲' : header.column.getIsSorted() === 'desc' ? '▼' : ''}
-                          </span>
-                        )}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
+            <div className="shadow-sm rounded-lg overflow-hidden border border-blue-100">
+              <table className="min-w-full text-sm">
+                <thead>
+                  {table.getHeaderGroups().map(headerGroup => (
+                    <tr key={headerGroup.id} className="text-black font-bold bg-gray-100">
+                      {headerGroup.headers.map(header => (
+                        <th
+                          key={header.id}
+                          className="p-2 text-sm cursor-pointer select-none relative group border border-gray-600"
+                          style={{ width: header.getSize(), minWidth: header.column.columnDef.minSize, maxWidth: header.column.columnDef.maxSize }}
+                          onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
+                        >
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                          {header.column.getCanSort() && (
+                            <span className="ml-1">
+                              {header.column.getIsSorted() === 'asc' ? '▲' : header.column.getIsSorted() === 'desc' ? '▼' : ''}
+                            </span>
+                          )}
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody>
                 {table.getRowModel().rows.map(row => (
-                  <tr key={row.id}>
-                    {row.getVisibleCells().map(cell => (
-                      <td key={cell.id} className="px-2 py-1 border">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
+              <React.Fragment key={row.id}>
+                <tr
+                  className={
+                    `border border-border transition ` +
+                    (row.getIsSelected()
+                      ? 'bg-white'
+                      : row.index % 2 === 0
+                        ? 'bg-white'
+                        : 'bg-[#F5F5F5] hover:bg-muted')
+                  }
+                >
+                  {row.getVisibleCells().map(cell => (
+                    <td key={cell.id} className="pl-1 align-bottom border border-gray-400">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+                {row.getIsExpanded() && (
+                  <tr>
+                    <td colSpan={row.getVisibleCells().length} className="bg-white px-10">
+                      
+                      {Array.isArray(row.original.vehicleMaintenance) && row.original.vehicleMaintenance.length > 0 ? (
+                        <div className="w-full overflow-x-auto">
+                          <table className="w-full text-sm border border-gray-200 bg-white font-[Roboto,Arial,sans-serif]">
+                            <thead className="bg-gray-100">
+                              <tr>
+                                <th className="px-2 py-1 border border-gray-400 text-left">Plate</th>
+                                <th className="px-2 py-1 border border-gray-400 text-left">Model</th>
+                                <th className="px-2 py-1 border border-gray-400 text-left">Description</th>
+                                <th className="px-2 py-1 border border-gray-400 text-left">Amount</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {row.original.vehicleMaintenance.map((vm, idx) => (
+                                <tr key={vm._id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                  <td className="px-2 py-1 border-r border-b border-gray-300">{vm.vehicleId?.plate || '-'}</td>
+                                  <td className="px-2 py-1 border-r border-b border-gray-300">{vm.vehicleId?.model || '-'}</td>
+                                  <td className="px-2 py-1 border-r border-b border-gray-300">{vm.description || '-'}</td>
+                                  <td className="px-2 py-1 border-r border-b border-gray-300">{formatCurrency(vm.amount)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">No vehicle maintenance records.</span>
+                      )}
+
+                      {/* Custom expanded content for the row */}
+                      <div className="mx-2 px-2 rounded-lg   flex flex-wrap gap-5 items-center ">
+                        <div className="w-full mb-2 text-sm font-bold text-gray-700 flex items-center gap-2">
+                          <span className="inline-block w-1.5 h-4 bg-primary rounded-full mr-2"></span>
+                          {row.original.reason} 
+                          <span className="inline-block w-1.5 h-4 bg-primary rounded-full mr-2"></span>
+                          Quantity: {row.original.quantity}
+                          <span className="inline-block w-1.5 h-4 bg-primary rounded-full mr-2"></span>
+                          Suspence: {row.original.suspenceAmount}
+                          <span className="inline-block w-1.5 h-4 bg-primary rounded-full mr-2"></span>
+                          Return: {row.original.returnAmount}
+                        </div>
+                        
+                      </div>
+                    </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                )}
+              </React.Fragment>
+            ))}
+                </tbody>
+              </table>
+            </div>
             {/* Pagination controls */}
             <div className="flex items-center justify-between mt-4">
               <div className="flex items-center gap-2">
@@ -454,7 +559,17 @@ const TransactionTable = ({
           {/* Card layout for small screens */}
           <div className="md:hidden flex flex-col gap-4">
             {table.getRowModel().rows.map(row => (
-              <div key={row.id} className="bg-white rounded shadow border p-4 flex flex-col gap-2">
+              <div key={row.id} className="bg-white rounded-lg shadow-sm border border-blue-100 p-4 flex flex-col gap-2">
+                {/* Expand button for mobile */}
+                {row.original.vehicleMaintenance && row.original.vehicleMaintenance.length > 0 && (
+                  <button
+                    className="self-end text-blue-600 hover:text-blue-900 focus:outline-none mb-2"
+                    onClick={() => row.toggleExpanded()}
+                    aria-label={row.getIsExpanded() ? 'Collapse' : 'Expand'}
+                  >
+                    {row.getIsExpanded() ? '▼ Hide Details' : '▶ Show Details'}
+                  </button>
+                )}
                 {row.getVisibleCells().map(cell => (
                   <div key={cell.id} className="flex flex-col mb-2">
                     <span className="text-xs font-semibold text-gray-500 mb-1">
@@ -463,6 +578,41 @@ const TransactionTable = ({
                     <div>{flexRender(cell.column.columnDef.cell, cell.getContext())}</div>
                   </div>
                 ))}
+                {/* Expanded vehicleMaintenance for mobile */}
+                {row.getIsExpanded() && row.original.vehicleMaintenance && row.original.vehicleMaintenance.length > 0 && (
+                  <div className="mt-2 bg-blue-50 rounded-lg p-2">
+                    <div className="font-semibold text-blue-900 mb-1">Vehicle Maintenance</div>
+                    <table className="min-w-[300px] w-full text-xs border border-blue-100 rounded-lg">
+                      <thead>
+                        <tr className="bg-blue-100 text-blue-900">
+                          <th className="px-2 py-1 text-left">Vehicle ID</th>
+                          <th className="px-2 py-1 text-left">Description</th>
+                          <th className="px-2 py-1 text-left">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {row.original.vehicleMaintenance.map(vm => (
+                          <tr key={vm._id} className="border-b last:border-b-0">
+                            <td className="px-2 py-1 font-mono text-blue-800">
+                              {vm.vehicleId && typeof vm.vehicleId === 'object' ? (
+                                <>
+                                  <span>{vm.vehicleId.plate}</span>
+                                  {vm.vehicleId.model && (
+                                    <span className="text-xs text-gray-500 ml-1">({vm.vehicleId.model})</span>
+                                  )}
+                                </>
+                              ) : (
+                                vm.vehicleId
+                              )}
+                            </td>
+                            <td className="px-2 py-1">{vm.description}</td>
+                            <td className="px-2 py-1 text-green-700 font-semibold">{formatCurrency ? formatCurrency(vm.amount) : vm.amount}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             ))}
             {/* Pagination controls for mobile */}

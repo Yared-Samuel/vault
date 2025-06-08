@@ -13,8 +13,7 @@ export default async function handler(req, res) {
     }
   } else if (req.method === 'PATCH') {
     try {
-      const { transactionId, cashAccountId, type, relatedReceiptUrl, reason, to , returnAmount, quantity, recept_reference } = req.body;
-      console.log(req.body);
+      const { transactionId, cashAccountId, type,  reason, to , returnAmount, quantity, recept_reference, vehicleMaintenance } = req.body;
       if (!transactionId || !cashAccountId || !type ||  !recept_reference) {
         return res.status(400).json({ error: `Missing required fields: ${!type ? 'type' : ''}${!recept_reference ? 'recept_reference' : ''}` });
       }
@@ -24,6 +23,7 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Transaction or Cash Account not found' });
       }
       let amountToDeduct = 0;
+      let amountUsed = 0;
       let newStatus = '';
       if (type === 'receipt_payment') {
         amountToDeduct = transaction.amount;
@@ -31,29 +31,45 @@ export default async function handler(req, res) {
         if (typeof reason === 'string') transaction.reason = reason;
         if (typeof to === 'string') transaction.to = to;
         if (typeof recept_reference === 'string') transaction.recept_reference = recept_reference;
-        if (typeof relatedReceiptUrl === 'string' && relatedReceiptUrl) transaction.relatedReceiptUrl = relatedReceiptUrl;
+        if (typeof vehicleMaintenance === 'object') transaction.vehicleMaintenance = vehicleMaintenance;
       } else if (type === 'suspence_payment') {
         const suspenceAmount = transaction.suspenceAmount || 0;
-        const retAmount = typeof returnAmount === 'number' ? returnAmount : Number(returnAmount) || 0;
-        amountToDeduct = suspenceAmount - retAmount;
-        newStatus = 'suspence';
-        if (typeof returnAmount !== 'undefined') transaction.returnAmount = retAmount;
+        newStatus = 'paid';
+
+        amountUsed = suspenceAmount - returnAmount;
+        
+        
         if (typeof reason === 'string') transaction.reason = reason;
         if (typeof to === 'string') transaction.to = to;
-        if (typeof relatedReceiptUrl === 'string' && relatedReceiptUrl) transaction.relatedReceiptUrl = relatedReceiptUrl;
         transaction.amount = amountToDeduct;
+        if (typeof vehicleMaintenance === 'object') transaction.vehicleMaintenance = vehicleMaintenance;
+        if (typeof recept_reference === 'string') transaction.recept_reference = recept_reference;
       } else {
         return res.status(400).json({ error: 'Invalid transaction type' });
       }
-      if (typeof amountToDeduct !== 'number' || amountToDeduct <= 0) {
+      if (typeof amountToDeduct !== 'number' || amountToDeduct <= 0 && type === 'receipt_payment') {
         return res.status(400).json({ error: 'Invalid amount to deduct' });
       }
-      if (cashAccount.balance < amountToDeduct) {
+      if (cashAccount.balance < amountToDeduct && type === 'receipt_payment') {
         return res.status(400).json({ error: 'Insufficient balance in cash account' });
       }
-      cashAccount.balance -= amountToDeduct;
+      type === 'receipt_payment' ? cashAccount.balance -= amountToDeduct : cashAccount.balance += Number(returnAmount);
+      transaction.amount = Number(amountUsed)
       transaction.status = newStatus;
       transaction.cashAccount = cashAccount._id;
+      if (!transaction.serialNumber) {
+        const now = new Date();
+        const pad = (n) => n.toString().padStart(2, '0');
+        const serialNumber =
+          now.getFullYear().toString().slice(-2) + // last 2 digits of year
+          pad(now.getMonth() + 1) +
+          pad(now.getDate()) +
+          pad(now.getHours()) +
+          pad(now.getMinutes()) +
+          pad(now.getSeconds());
+        transaction.serialNumber = Number(serialNumber);
+      }
+
       await cashAccount.save();
       await transaction.save();
       res.status(200).json({ success: true, cashAccount, transaction });

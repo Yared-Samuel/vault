@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -29,6 +29,9 @@ import {
   ArrowDown,
   ArrowUpDown
 } from 'lucide-react';
+import { DateRange } from 'react-date-range';
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
 
 export default function FuelTransactionsPage() {
   useRedirectLoggedOutUser();
@@ -37,8 +40,16 @@ export default function FuelTransactionsPage() {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [columnFilters, setColumnFilters] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [fuelUsage, setFuelUsage] = useState(0);
-  const [filterData, setFilterData] = useState([])
+  const [dateRange, setDateRange] = useState([
+    {
+      startDate: null,
+      endDate: null,
+      key: 'selection',
+    },
+  ]);
+  const [filteredTransactions, setFilteredTransactions] = useState([]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const datePickerRef = useRef(null);
 
   useEffect(() => {
     const fetchFuelTransactions = async () => {
@@ -61,6 +72,18 @@ export default function FuelTransactionsPage() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showModal]);
+
+  // Close picker on outside click
+  useEffect(() => {
+    if (!showDatePicker) return;
+    function handleClick(e) {
+      if (datePickerRef.current && !datePickerRef.current.contains(e.target)) {
+        setShowDatePicker(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showDatePicker]);
 
   // Helper for formatting
   function formatDateShort(date) {
@@ -111,14 +134,23 @@ export default function FuelTransactionsPage() {
     },
   ];
 
-  console.log(fuelUsage)
-  useEffect(()=> {
-    const data = fuelTransaction.filter(f => f.km_lit > fuelUsage);
-    setFilterData(data)
-  },[fuelUsage])
+  useEffect(() => {
+    let filtered = fuelTransaction;
+    const { startDate, endDate } = dateRange[0];
+    if (startDate) {
+      filtered = filtered.filter(f => new Date(f.pumpedAt) >= new Date(startDate));
+    }
+    if (endDate) {
+      // Set endDate to end of the day to include all records on that day
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(f => new Date(f.pumpedAt) <= end);
+    }
+    setFilteredTransactions(filtered);
+  }, [dateRange, fuelTransaction]);
 
   const table = useReactTable({
-    data: fuelUsage === 0 ? fuelTransaction : filterData,
+    data: (dateRange[0].startDate || dateRange[0].endDate) ? filteredTransactions : fuelTransaction,
     columns,
     state: { sorting, pagination, columnFilters },
     onSortingChange: setSorting,
@@ -139,10 +171,85 @@ export default function FuelTransactionsPage() {
           <Fuel className="w-5 h-5 md:w-10 md:h-10 text-green-800"  />
           Fuel Consumption
         </h2>
-        <input type="number" onChange={(e) => setFuelUsage(e.target.value)} defaultValue={0} className="border border-gray-300 rounded-md " />
+        {/* Date range picker dropdown */}
+        
         <Button className="flex items-center gap-2 font-bold text-1xl bg-green-800" onClick={() => setShowModal(true)} >
           <Fuel style={{ width: 20, height: 20 }} /> <span className="hidden md:block">Fuel Pump</span> 
         </Button>
+      </div>
+      <div>
+        <div style={{ position: 'relative', zIndex: 20, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+          <button
+            type="button"
+            className="border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-700 hover:bg-gray-100"
+            onClick={() => setShowDatePicker(v => !v)}
+          >
+            {dateRange[0].startDate && dateRange[0].endDate
+              ? `${dateRange[0].startDate.toLocaleDateString()} - ${dateRange[0].endDate.toLocaleDateString()}`
+              : 'Select date range'}
+          </button>
+          {(dateRange[0].startDate || dateRange[0].endDate) && (
+            <button
+              type="button"
+              className="border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-700 hover:bg-gray-100"
+              onClick={() => {
+                setDateRange([{ startDate: null, endDate: null, key: 'selection' }]);
+                setShowDatePicker(false);
+              }}
+            >
+              Clear
+            </button>
+          )}
+          {showDatePicker && (
+            <div
+              ref={datePickerRef}
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: '110%',
+                transform: 'translateX(-50%)',
+                background: 'white',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+                borderRadius: 8,
+                maxWidth: '95vw',
+                minWidth: 320,
+                padding: 8,
+                zIndex: 30,
+              }}
+            >
+              <DateRange
+                editableDateInputs={true}
+                onChange={item => {
+                  setDateRange([item.selection]);
+                  if (item.selection.startDate && item.selection.endDate) setShowDatePicker(false);
+                }}
+                moveRangeOnFirstSelection={false}
+                ranges={dateRange}
+                maxDate={new Date()}
+                showMonthAndYearPickers={true}
+                rangeColors={["#16a34a"]}
+              />
+            </div>
+          )}
+        </div>
+        <div></div>
+        {/* End date range picker dropdown */}
+
+        {/* Show sums only when a date range is selected */}
+        {(dateRange[0].startDate && dateRange[0].endDate) && (
+          <div className="flex gap-6 mt-2 justify-center">
+            <div className="font-semibold text-gray-800 bg-gray-100 rounded px-2 py-2">
+              {filteredTransactions.length} Vehicle{filteredTransactions.length !== 1 ? 's' : ''}
+            </div>
+            <div className="font-semibold text-green-800 bg-green-50 rounded px-4 py-2">
+              {filteredTransactions.reduce((sum, tx) => sum + (Number(tx.liters) || 0), 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} Lt
+            </div>
+            <div className="font-semibold text-blue-800 bg-blue-50 rounded px-4 py-2">
+              {filteredTransactions.reduce((sum, tx) => sum + (Number(tx.totalCost) || 0), 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ETB
+            </div>
+          </div>
+        )}
+
       </div>
       {showModal && (
         <div
@@ -202,7 +309,7 @@ export default function FuelTransactionsPage() {
         }
       `}</style>
       <div className="fuel-card-list" style={{ display: 'none', marginTop: 8 }}>
-        {fuelTransaction.map((tx, idx) => (
+        {(dateRange[0].startDate || dateRange[0].endDate ? filteredTransactions : fuelTransaction).map((tx, idx) => (
           <div key={tx._id || idx} style={{
             background: '#fff',
             borderRadius: 16,
