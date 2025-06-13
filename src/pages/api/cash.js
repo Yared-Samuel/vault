@@ -52,11 +52,14 @@ export default async function handler(req, res) {
       }
       if (cashAccount.balance < amountToDeduct && type === 'receipt_payment') {
         return res.status(400).json({ error: 'Insufficient balance in cash account' });
+        
       }
       type === 'receipt_payment' ? cashAccount.balance -= amountToDeduct : cashAccount.balance += Number(returnAmount);
-      transaction.amount = Number(amountUsed)
+      type === 'suspence_payment' ? transaction.amount = Number(amountUsed) : transaction.amount = Number(amountToDeduct);
       transaction.status = newStatus;
       transaction.cashAccount = cashAccount._id;
+      
+
       if (!transaction.serialNumber) {
         const now = new Date();
         const pad = (n) => n.toString().padStart(2, '0');

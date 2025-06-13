@@ -261,13 +261,12 @@ export default function TransactionsPage() {
   }
 
     return(
-      <div className="flex flex-col w-full">
+      <div className="flex flex-col w-full pt-2">
       <div className="flex justify-between items-center">
-      <h1 className="text-2xl font-bold">Rquests</h1>
+      <h1 className="text-2xl font-bold text-[#02733E]">Rquests</h1>
         <div className="flex gap-2">
-        <Button onClick={() => router.push('/transactions/new')}>Make Request</Button>
+        <Button onClick={() => router.push('/transactions/new')} className="bg-[#02733E] hover:bg-[#038C4C]/80 text-[#EEEFE0] cursor-pointer transition-all duration-200 font-bold text-lg">Make Request</Button>
         <RequireRole roles={["accountant", "admin"]} >
-        <Button onClick={() => router.push('/checks')}>Check Followup</Button>
         </RequireRole>
       </div>
       </div>

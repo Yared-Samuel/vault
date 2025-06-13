@@ -72,15 +72,15 @@ const Login = () => {
   return (
    
       
-        <div className=" min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-100 to-indigo-200 relative overflow-hidden px-2 sm:px-0">
-          <div className="w-full max-w-xs sm:max-w-md mx-auto bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200 px-4  sm:px-8 py-6 md:py-8 flex flex-col items-center animate-fadeInUp">
-            <Image src="/logo/Vault Logo.svg" alt="logo" width={100} height={100} className="mb-4" />
+        <div className=" min-h-screen flex items-center justify-center bg-white relative overflow-hidden px-2 sm:px-0">
+          <div className="w-full max-w-xs sm:max-w-md mx-auto bg-[#EEEFE0] backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200 px-4  sm:px-8 py-6 md:py-8 flex flex-col items-center animate-fadeInUp">
+            <Image src="/logo/Vault Logo.svg" alt="logo" width={90} height={90} className="mb-4" />
             {isLoading ? (
         <LoadingComponent />
       ) : (
             <form onSubmit={handleLogin} className="space-y-6 w-full">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label htmlFor="email" className="block text-sm font-bold text-black mb-1">
                   Email
                   <span className={validEmail ? "inline-block ml-1" : "hidden"}>
                     <Image src="/icons/checked-green.svg" alt="info" width={18} height={18} />
@@ -114,7 +114,7 @@ const Login = () => {
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                  <label htmlFor="password" className="block text-sm font-bold text-black dark:text-gray-200">
                     Password
                   </label>
                   <div
@@ -137,7 +137,7 @@ const Login = () => {
               <div className="flex justify-center mt-6">
                 <button
                   type="submit"
-                  className="w-1/2 sm:w-1/3 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-blue-500 text-white font-semibold text-lg shadow-md hover:from-indigo-600 hover:to-blue-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
+                  className="w-1/2 sm:w-1/3 py-2 rounded-lg bg-[#819A91] text-white font-semibold text-lg shadow-md hover:from-indigo-600 hover:to-blue-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
                 >
                   Login
                 </button>

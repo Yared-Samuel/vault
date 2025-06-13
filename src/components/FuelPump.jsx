@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react'
+import React, { useState, useEffect, useContext, useRef } from 'react'
 import { fuelPrice } from '@/lib/constants'
 import AuthContext from "../pages/context/AuthProvider"
 import { toast } from 'sonner'
@@ -28,6 +28,9 @@ const FuelPump = () => {
   const [fetchingLast, setFetchingLast] = useState(false);
   const [pricePerLiter, setPricePerLiter] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
+  const [vehicleSearch, setVehicleSearch] = useState('');
+  const [showVehicleList, setShowVehicleList] = useState(false);
+  const comboboxRef = useRef(null);
 
   useEffect(() => {
     const fetchVehicles = async () => {
@@ -62,6 +65,7 @@ const FuelPump = () => {
     }
     const fuelType = selectedVehicle.fuelType;
     const priceObj = fuelPrice.find(f => f.type === fuelType);
+    console.log(priceObj)
     setPricePerLiter(priceObj ? priceObj.price : 0);
   }, [form.vehicleId, vehicles]);
 
@@ -126,6 +130,18 @@ const FuelPump = () => {
     return errs;
   };
 
+  const filteredVehicles = vehicles.filter(v =>
+    (v.plate + ' ' + (v.model || '')).toLowerCase().includes(vehicleSearch.toLowerCase())
+  );
+
+  useEffect(() => {
+    if (!showVehicleList) return;
+    function handleClick(e) {
+      if (!comboboxRef.current || !comboboxRef.current.contains(e.target)) setShowVehicleList(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showVehicleList]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -254,27 +270,86 @@ const FuelPump = () => {
         ) : vehicles.length === 0 ? (
           <span style={{ marginLeft: 8 }}>No vehicles found</span>
         ) : (
-          <select
-            name="vehicleId"
-            value={form.vehicleId}
-            onChange={handleChange}
-            required
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              borderRadius: 8,
-              border: '1px solid #e2e8f0',
-              marginTop: 6,
-              fontSize: 15,
-              background: '#f9fafb',
-              outline: 'none',
-            }}
-          >
-            <option value="">Select vehicle</option>
-            {vehicles.map((v) => (
-              <option key={v._id} value={v._id}>{v.plate}</option>
-            ))}
-          </select>
+          <div ref={comboboxRef} style={{ position: 'relative', minWidth: 200 }}>
+            <input
+              type="text"
+              value={
+                form.vehicleId
+                  ? (vehicles.find(v => v._id === form.vehicleId)?.plate || '') +
+                    (vehicles.find(v => v._id === form.vehicleId)?.model ? ' - ' + vehicles.find(v => v._id === form.vehicleId)?.model : '')
+                  : vehicleSearch
+              }
+              onChange={e => {
+                setVehicleSearch(e.target.value);
+                setShowVehicleList(true);
+                setForm(prev => ({ ...prev, vehicleId: '' }));
+              }}
+              onFocus={() => setShowVehicleList(true)}
+              placeholder="Search vehicle..."
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: 8,
+                border: '1px solid #e2e8f0',
+                marginTop: 6,
+                fontSize: 15,
+                background: '#f9fafb',
+                outline: 'none',
+              }}
+              autoComplete="off"
+              readOnly={!!form.vehicleId}
+              required
+            />
+            {form.vehicleId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setForm(prev => ({ ...prev, vehicleId: '' }));
+                  setVehicleSearch('');
+                  setShowVehicleList(false);
+                }}
+                style={{ position: 'absolute', right: 8, top: 16, zIndex: 101, background: 'transparent', border: 'none', cursor: 'pointer', color: '#888' }}
+              >
+                ×
+              </button>
+            )}
+            {showVehicleList && !form.vehicleId && (
+              <ul
+                style={{
+                  position: 'absolute',
+                  zIndex: 100,
+                  background: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 4,
+                  width: '100%',
+                  maxHeight: 180,
+                  overflowY: 'auto',
+                  margin: 0,
+                  padding: 0,
+                  listStyle: 'none',
+                  top: '110%',
+                  left: 0
+                }}
+              >
+                {filteredVehicles.length === 0 && (
+                  <li style={{ padding: 8, color: '#888' }}>No vehicles found</li>
+                )}
+                {filteredVehicles.map(v => (
+                  <li
+                    key={v._id}
+                    style={{ padding: 8, cursor: 'pointer' }}
+                    onClick={() => {
+                      setForm(prev => ({ ...prev, vehicleId: v._id }));
+                      setVehicleSearch('');
+                      setShowVehicleList(false);
+                    }}
+                  >
+                    {v.plate} {v.model ? `- ${v.model}` : ''}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
         {errors.vehicleId && <span style={{ color: 'red', marginLeft: 8 }}>{errors.vehicleId}</span>}
       </label>

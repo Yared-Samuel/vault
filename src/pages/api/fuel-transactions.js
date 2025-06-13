@@ -8,7 +8,7 @@ export default async function handler(req, res) {
       await dbConnect();
       const transactions = await FuelTransaction.find()
         .sort({ createdAt: -1 })
-        .populate('vehicleId', 'plate  category fuelType')
+        .populate('vehicleId', 'plate  category fuelType model')
         .populate('recordedBy', 'name');
       return res.status(200).json({ success: true, data: transactions });
     } catch (error) {
@@ -47,7 +47,19 @@ export default async function handler(req, res) {
       console.error('Error creating fuel transaction:', error);
       return res.status(500).json({ success: false, message: 'Server error. Could not create fuel transaction.' });
     }
-  } else {
+  }
+  else if (req.method === 'PATCH') {
+    try {
+      await dbConnect();
+      const data = req.body;
+      const transaction = await FuelTransaction.findByIdAndUpdate(data.id, data, { new: true });
+      return res.status(200).json({ success: true, data: transaction });
+    } catch (error) {
+      console.error('Error updating fuel transaction:', error);
+      return res.status(500).json({ success: false, message: 'Server error. Could not update fuel transaction.' });
+    }
+  }
+  else {
     res.setHeader('Allow', ['GET', 'POST']);
     res.status(405).json({ success: false, message: `Method ${req.method} Not Allowed` });
   }

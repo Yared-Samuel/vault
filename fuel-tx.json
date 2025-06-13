@@ -1,0 +1,26 @@
+﻿
+
+StatusCode        : 200
+StatusDescription : OK
+Content           : {"success":true,"data":[{"_id":"68452a7d54e86eceb989b178","vehicleId":{"_id":"68416c3c1
+                    8ffef0a2b1d53f9","plate":"2-A14223","fuelType":"Benzin"},"pumpedAt":"2025-06-08T06:13:1
+                    9.707Z","odometer":157061,...
+RawContent        : HTTP/1.1 200 OK
+                    Vary: Accept-Encoding
+                    Connection: keep-alive
+                    Keep-Alive: timeout=5
+                    Content-Length: 14108
+                    Content-Type: application/json; charset=utf-8
+                    Date: Mon, 09 Jun 2025 08:39:19 GMT
+                    ETag: ...
+Forms             : {}
+Headers           : {[Vary, Accept-Encoding], [Connection, keep-alive], [Keep-Alive, timeout=5], 
+                    [Content-Length, 14108]...}
+Images            : {}
+InputFields       : {}
+Links             : {}
+ParsedHtml        : mshtml.HTMLDocumentClass
+RawContentLength  : 14108
+
+
+

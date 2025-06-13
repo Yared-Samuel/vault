@@ -93,7 +93,7 @@ const TransactionTable = ({
         maxSize: 56,
       cell: ({ row }) => (
         typeof (row.original.amount || row.original.suspenceAmount) === 'number' ? (
-          <span className="font-bold text-green-700">
+          <span className="font-bold text-[#038C4C">
             {formatCurrency(row.original.amount || row.original.suspenceAmount)}
           </span>
         ) : <span className="text-gray-400">-</span>
@@ -111,7 +111,7 @@ const TransactionTable = ({
         minSize: 40,
         maxSize: 56,
       cell: ({ row }) => (
-        <span className="text-xs font-semibold px-2 rounded bg-blue-50 text-blue-800">
+        <span className="text-xs font-semibold px-2 rounded bg-blue-50 text-[#A7C1A8">
           {row.original.type === 'receipt_payment' ? 'Cash Payment' : row.original.type === 'suspence_payment' ? 'Suspence Payment' : row.original.type}
         </span>
       ),
@@ -363,25 +363,39 @@ const TransactionTable = ({
       {/* Filter Dropdown and Cash Accounts Badges in one line, responsive */}
       <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-2 my-4 w-full">
         <div className="flex items-center gap-2 flex-shrink-0">
-          <label>Status:</label>
-          <select
-            value={filter}
-            onChange={e => setFilter(e.target.value)}
-            className="border rounded px-2 py-1"
-          >
-            {transactionStatusesModel.map(status => (
-              <option key={status} value={status}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </option>
-            ))}
-            <option value="all">All</option>
-          </select>
+          <label className="font-semibold text-foreground mr-1">Status:</label>
+          <div className="relative">
+            <select
+              value={filter}
+              onChange={e => setFilter(e.target.value)}
+              className="rounded-md border border-border bg-muted text-muted-foreground px-4 py-1.5 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm font-semibold transition-all duration-150 pr-8"
+            >
+              {transactionStatusesModel.map(status => (
+                <option key={status} value={status}>
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </option>
+              ))}
+              <option value="all">All</option>
+            </select>
+            {/* Dropdown Icon */}
+            <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
         </div>
         {cashAccounts.length > 0 && (
           <div className="flex flex-wrap gap-2 md:ml-4">
             {cashAccounts.map(account => (
-              <span key={account._id} className="inline-block bg-gray-200 text-gray-800 px-3 py-1 rounded-full font-semibold">
-                {account.name} &mdash; Balance: {account.balance}
+              <span
+                key={account._id}
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-green-100 via-lime-100 to-emerald-100 text-[#02733E] px-4 py-2 rounded-full font-semibold shadow-md transition-transform duration-200 hover:scale-105 hover:shadow-lg border border-green-200"
+              >
+                {/* Wallet Icon */}
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#02733E" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75A2.25 2.25 0 014.5 4.5h15a2.25 2.25 0 012.25 2.25v12a2.25 2.25 0 01-2.25 2.25h-15A2.25 2.25 0 012.25 18.75v-12zM19.5 8.25h-15m0 0V18.75m0-10.5V4.5" />
+                </svg>
+                <span className="font-bold text-green-900">{account.name}</span>
+                <span className="text-green-700 font-medium">&mdash; Balance: <span className="font-bold">${Number(account.balance).toLocaleString()}</span></span>
               </span>
             ))}
           </div>

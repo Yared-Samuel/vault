@@ -15,7 +15,8 @@ export default function App({ Component, pageProps }) {
   const isPrintPage =
     router.pathname === '/checks/print' ||
     router.pathname === '/cash/invoice/print' ||
-    router.pathname === '/cash/suspenceInvoice/[id]';
+    router.pathname === '/cash/suspenceInvoice/[id]' ||
+    router.pathname === '/fuel-transactions/report';
   const [collapsed, setCollapsed] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -29,6 +30,7 @@ export default function App({ Component, pageProps }) {
         <Component {...pageProps} />
       ) : (
         <>
+            <AppHeader />
           
           <div className="flex">
           <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
@@ -56,7 +58,6 @@ export default function App({ Component, pageProps }) {
           )}
           <main className="flex pt-12 px-2 w-full h-screen overflow-y-auto">
             <Toaster position="top-right" richColors size="lg" />
-            <AppHeader />
             <Component {...pageProps} />
           </main>
           </div>

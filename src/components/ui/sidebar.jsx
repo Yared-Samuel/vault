@@ -12,19 +12,20 @@ import {
   ChevronRight,
   ChevronDown,
   Users,
+  Circle,
+  ChevronsLeftRight,
 } from "lucide-react";
 import Image from "next/image";
 
 const navItems = [
+
   {
-    label: "Request",
-    href: "/transactions",
-    icon: FileText,
-  },
-  {
-    label: "Request Payment",
-    href: "/cash",
+    label: "Payments",
     icon: CreditCard,
+    dropdown: [
+      { label: "Payment Request", href: "/transactions" , icon: <Circle size={10}/> },
+      { label: "Payment Actions", href: "/cash" , icon: <Circle size={10}/> },
+    ],
   },
   {
     label: "Check Requests",
@@ -36,22 +37,10 @@ const navItems = [
     label: "Vehicles",
     icon: Car,
     dropdown: [
-      { label: "Vehicle List", href: "/vehicles" },
-      { label: "New Vehicle", href: "/vehicles/new" },
+      { label: "Vehicle List", href: "/vehicles" , icon:  <ChevronsLeftRight size={10}/>},
+      { label: "New Vehicle", href: "/vehicles/new" , icon:  <ChevronsLeftRight size={10}/>},
+      { label: "Fuel Dispense", href: "/fuel-transactions", icon:  <ChevronsLeftRight size={10}/>},
     ],
-  },
-  {
-    label: "Parts",
-    icon: Package,
-    dropdown: [
-      { label: "Inventory", href: "/parts" },
-      { label: "Add/Adjust Part", href: "/parts/new" },
-    ],
-  },
-  {
-    label: "Fuel Transactions",
-    icon: Fuel,
-    href: "/fuel-transactions",
   },
   {
     label: "Reports",
@@ -86,7 +75,14 @@ export default function AppSidebar({ collapsed, setCollapsed, sidebarOpen, setSi
   const [openDropdowns, setOpenDropdowns] = useState({});
 
   const toggleDropdown = (label) => {
-    setOpenDropdowns((prev) => ({ ...prev, [label]: !prev[label] }));
+    setOpenDropdowns((prev) => {
+      // If the clicked dropdown is already open, close it
+      if (prev[label]) return {};
+      // Otherwise, open only this dropdown and close all others
+      const newState = {};
+      newState[label] = true;
+      return newState;
+    });
   };
 
   const closeSidebar = () => setSidebarOpen(false);
@@ -94,69 +90,77 @@ export default function AppSidebar({ collapsed, setCollapsed, sidebarOpen, setSi
   console.log(sidebarOpen)
 
   return (
-    <>
-      {/* Sidebar */}
-      {/* Mobile sidebar overlay */}
-      <>
+    
+      <div className="pt-13">
         {/* Overlay and sidebar for mobile only */}
         <div className={
           `sm:hidden ${sidebarOpen ? '' : 'hidden'}`
         }>
           {/* Overlay */}
           <div
-            className="fixed inset-0 z-40 bg-black/30"
+            className="fixed inset-0 z-40 bg-black/50"
             onClick={closeSidebar}
             aria-hidden={!sidebarOpen}
           />
           {/* Sidebar */}
           <aside
             id="logo-sidebar"
-            className={`fixed top-0 left-0 z-50 w-60 h-screen bg-white dark:bg-gray-800 shadow-lg transition-transform duration-300 ease-in-out
+            className={`fixed top-0 left-0 z-50 w-60 h-screen bg-[#EEEFE0] shadow-lg transition-transform duration-300 ease-in-out
               ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
               sm:hidden`}
             aria-label="Sidebar"
           >
+            
             {/* Sidebar content (copy from below) */}
             <button
               type="button"
-              className=" flex items-center justify-center absolute top-0  left-45 w-9 h-9 bg-gradient-to-l hover:from-gray-400 hover:to-gray-200 border-0 rounded-full shadow-lg   hover:scale-105 active:scale-95 transition-all duration-300 group z-50 cursor-pointer"
+              className=" flex items-center justify-center absolute top-20  left-45 w-9 h-9 bg-gradient-to-l hover:from-gray-400 hover:to-gray-200 border-0 rounded-full shadow-lg   hover:scale-105 active:scale-95 transition-all duration-300 group z-50 cursor-pointer"
               onClick={() => setCollapsed(true) || closeSidebar()}
               title="Collapse sidebar"
             >
               <Image src="/close-side.svg" alt="expand"  width={20} height={20} />
             </button>
-            <div className="h-full px-3 pb-8 overflow-y-auto bg-white dark:bg-gray-800 flex flex-col justify-between ">
-              <ul className="space-y-2 font-medium">
+            <div className="h-full px-3 pb-8 overflow-y-auto bg-[#EEEFE0] flex flex-col justify-between ">
+              
+              <ul className="space-y-2 font-small text-sm">
+                
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   if (item.dropdown) {
                     // Check if any dropdown item is active
                     const isActive = item.dropdown.some((d) => router.pathname === d.href);
-                    const isOpen = openDropdowns[item.label] || isActive;
+                    const isOpen = !!openDropdowns[item.label];
                     return (
                       <li key={item.label}>
                         <button
                           type="button"
                           onClick={() => toggleDropdown(item.label)}
-                          className={`flex items-center w-full p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group ${isActive ? "bg-gray-100 dark:bg-gray-700" : ""}`}
+                          className={`flex items-center w-full p-2 rounded-lg group transition-colors duration-150
+                            ${isOpen ? 'bg-[#f1f5f9]' : ''}
+                            ${isActive ? 'border-l-4 border-[#A7C1A8] bg-[#A7C1A8] text-white font-bold' : 'text-[#1a202c] hover:bg-[#e3e8f0]'}
+                          `}
                         >
-                          <Icon className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" />
+                          <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-[#64748b] group-hover:text-[#2563eb]'}`} />
                           <span className="flex-1 ms-3 text-left whitespace-nowrap">{item.label}</span>
                           {isOpen ? (
-                            <ChevronDown className="w-4 h-4 ml-auto" />
+                            <ChevronDown className="w-4 h-4 ml-auto text-[#2563eb]" />
                           ) : (
-                            <ChevronRight className="w-4 h-4 ml-auto" />
+                            <ChevronRight className="w-4 h-4 ml-auto text-[#64748b]" />
                           )}
                         </button>
                         {isOpen && (
-                          <ul className="pl-8 mt-1 space-y-1">
+                          <ul className="pl-8 mt-1 space-y-1 text-xs" style={{ background: '#f1f5f9', borderRadius: 6 }}>
                             {item.dropdown.map((d) => (
                               <li key={d.href}>
                                 <Link
                                   href={d.href}
-                                  className={`flex items-center p-2 text-gray-700 rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 ${router.pathname === d.href ? "bg-accent text-accent-foreground dark:bg-gray-700 dark:text-white" : ""}`}
+                                  className={`flex items-center p-2 rounded-lg transition-colors duration-150
+                                    ${router.pathname === d.href ? 'bg-[#A7C1A8] text-white font-bold' : 'text-[#1a202c] hover:bg-[#e3e8f0]'}
+                                  `}
                                   onClick={closeSidebar}
+                                  style={{ marginLeft: 12 }}
                                 >
+                                  {d.icon && <span className="mr-2">{d.icon}</span>}
                                   <span>{d.label}</span>
                                 </Link>
                               </li>
@@ -171,10 +175,12 @@ export default function AppSidebar({ collapsed, setCollapsed, sidebarOpen, setSi
                     <li key={item.label}>
                       <Link
                         href={item.href}
-                        className={`flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group ${router.pathname === item.href ? "bg-gray-100 dark:bg-gray-700" : ""}`}
+                        className={`flex items-center p-2 rounded-lg group transition-colors duration-150
+                          ${router.pathname === item.href ? 'border-l-4 border-[#A7C1A8] bg-[#A7C1A8] text-white font-bold' : 'text-[#1a202c] hover:bg-[#e3e8f0]'}
+                        `}
                         onClick={closeSidebar}
                       >
-                        <Icon className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" />
+                        <Icon className={`w-5 h-5 ${router.pathname === item.href ? 'text-white' : 'text-[#64748b] group-hover:text-[#2563eb]'}`} />
                         <span className="ms-3">{item.label}</span>
                       </Link>
                     </li>
@@ -198,9 +204,10 @@ export default function AppSidebar({ collapsed, setCollapsed, sidebarOpen, setSi
         {!collapsed && (
           <aside
             id="logo-sidebar"
-            className="hidden sm:block relative w-60  h-screen transition-transform -translate-x-full sm:translate-x-0 duration-600 ease-in-out"
+            className="hidden sm:block relative w-60  h-screen bg-[#EEEFE0] transition-transform -translate-x-full sm:translate-x-0 duration-600 ease-in-out"
             aria-label="Sidebar"
           >
+   
             {/* Sidebar content (same as above) */}
             <button
               type="button"
@@ -210,14 +217,14 @@ export default function AppSidebar({ collapsed, setCollapsed, sidebarOpen, setSi
             >
               <Image src="/close-side.svg" alt="expand"  width={20} height={20} />
             </button>
-            <div className="h-full px-3 pb-8 overflow-y-auto bg-white dark:bg-gray-800 flex flex-col justify-between ">
+            <div className="h-full px-3 pb-8 overflow-y-auto bg-[#EEEFE0] flex flex-col justify-between ">
               <ul className="space-y-2 font-medium">
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   if (item.dropdown) {
                     // Check if any dropdown item is active
                     const isActive = item.dropdown.some((d) => router.pathname === d.href);
-                    const isOpen = openDropdowns[item.label] || isActive;
+                    const isOpen = !!openDropdowns[item.label];
                     return (
                       <li key={item.label}>
                         <button
@@ -234,14 +241,18 @@ export default function AppSidebar({ collapsed, setCollapsed, sidebarOpen, setSi
                           )}
                         </button>
                         {isOpen && (
-                          <ul className="pl-8 mt-1 space-y-1">
+                          <ul className="pl-8 mt-1 space-y-1 text-xs" style={{ background: '#f1f5f9', borderRadius: 6 }}>
                             {item.dropdown.map((d) => (
                               <li key={d.href}>
                                 <Link
                                   href={d.href}
-                                  className={`flex items-center p-2 text-gray-700 rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 ${router.pathname === d.href ? "bg-accent text-accent-foreground dark:bg-gray-700 dark:text-white" : ""}`}
+                                  className={`flex items-center p-2 rounded-lg transition-colors duration-150
+                                    ${router.pathname === d.href ? 'bg-[#A7C1A8] text-white font-bold' : 'text-[#1a202c] hover:bg-[#e3e8f0]'}
+                                  `}
                                   onClick={closeSidebar}
+                                  style={{ marginLeft: 12 }}
                                 >
+                                  {d.icon && <span className="mr-2">{d.icon}</span>}
                                   <span>{d.label}</span>
                                 </Link>
                               </li>
@@ -256,10 +267,12 @@ export default function AppSidebar({ collapsed, setCollapsed, sidebarOpen, setSi
                     <li key={item.label}>
                       <Link
                         href={item.href}
-                        className={`flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group ${router.pathname === item.href ? "bg-gray-100 dark:bg-gray-700" : ""}`}
+                        className={`flex items-center p-2 rounded-lg group transition-colors duration-150
+                          ${router.pathname === item.href ? 'border-l-4 border-[#A7C1A8] bg-[#A7C1A8] text-white font-bold' : 'text-[#1a202c] hover:bg-[#e3e8f0]'}
+                        `}
                         onClick={closeSidebar}
                       >
-                        <Icon className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" />
+                        <Icon className={`w-5 h-5 ${router.pathname === item.href ? 'text-white' : 'text-[#64748b] group-hover:text-[#2563eb]'}`} />
                         <span className="ms-3">{item.label}</span>
                       </Link>
                     </li>
@@ -279,7 +292,6 @@ export default function AppSidebar({ collapsed, setCollapsed, sidebarOpen, setSi
             </div>
           </aside>
         )}
-      </>
-    </>
+      </div>
   );
 } 

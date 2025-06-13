@@ -27,11 +27,15 @@ import {
   Filter,
   ArrowUp,
   ArrowDown,
-  ArrowUpDown
+  ArrowUpDown,
+  Ellipsis,
+  PencilLine,
+  Printer
 } from 'lucide-react';
 import { DateRange } from 'react-date-range';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
 
 export default function FuelTransactionsPage() {
   useRedirectLoggedOutUser();
@@ -50,6 +54,15 @@ export default function FuelTransactionsPage() {
   const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef(null);
+  const [vehicles, setVehicles] = useState([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState('');
+  const [vehicleFetchError, setVehicleFetchError] = useState(null);
+  const [vehicleLoading, setVehicleLoading] = useState(true);
+  const [vehicleSearch, setVehicleSearch] = useState('');
+  const [showVehicleList, setShowVehicleList] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editValues, setEditValues] = useState({});
 
   useEffect(() => {
     const fetchFuelTransactions = async () => {
@@ -85,6 +98,42 @@ export default function FuelTransactionsPage() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showDatePicker]);
 
+  // Fetch vehicles for filter
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        setVehicleLoading(true);
+        const res = await fetch('/api/vehicles');
+        const data = await res.json();
+        if (data.success) {
+          setVehicles(data.data);
+        } else {
+          setVehicleFetchError('Failed to fetch vehicles');
+        }
+      } catch (err) {
+        setVehicleFetchError('Failed to fetch vehicles');
+      } finally {
+        setVehicleLoading(false);
+      }
+    };
+    fetchVehicles();
+  }, []);
+
+  // Filtered vehicles for combobox
+  const filteredVehicles = vehicles.filter(v =>
+    (v.plate + ' ' + (v.model || '')).toLowerCase().includes(vehicleSearch.toLowerCase())
+  );
+
+  // Close vehicle dropdown on outside click
+  useEffect(() => {
+    if (!showVehicleList) return;
+    function handleClick(e) {
+      if (!e.target.closest('.vehicle-combobox')) setShowVehicleList(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showVehicleList]);
+
   // Helper for formatting
   function formatDateShort(date) {
     if (!date) return '';
@@ -105,32 +154,158 @@ export default function FuelTransactionsPage() {
     {
       header: <span>Liters</span>,
       accessorKey: "liters",
-      cell: info => <Badge variant="secondary">{formatNumber(info.getValue(), 2)} Lt</Badge>,
+      cell: info => {
+        const row = info.row.original;
+        if (editingId === row._id) {
+          return (
+            <input
+              type="number"
+              step="0.01"
+              className="border rounded px-2 py-1 w-24"
+              value={editValues.liters ?? ''}
+              onChange={e => setEditValues(v => ({ ...v, liters: e.target.value }))}
+            />
+          );
+        }
+        return <Badge variant="secondary">{formatNumber(info.getValue(), 2)} Lt</Badge>;
+      },
     },
     {
       header: <span>KM/L</span>,
       accessorKey: "km_lit",
-      cell: info => <Badge variant="secondary">{formatNumber(info.getValue(), 2)} KM/L</Badge>,
+      cell: info => {
+        const row = info.row.original;
+        if (editingId === row._id) {
+          return (
+            <input
+              type="number"
+              step="0.01"
+              className="border rounded px-2 py-1 w-24"
+              value={editValues.km_lit ?? ''}
+              onChange={e => setEditValues(v => ({ ...v, km_lit: e.target.value }))}
+            />
+          );
+        }
+        return <Badge variant="secondary">{formatNumber(info.getValue(), 2)} KM/L</Badge>;
+      },
     },
     {
       header: <span>Total Cost</span>,
       accessorKey: "totalCost",
-      cell: info => <Badge variant="primary">${formatNumber(info.getValue(), 2)}</Badge>,
+      cell: info => {
+        const row = info.row.original;
+        if (editingId === row._id) {
+          return (
+            <input
+              type="number"
+              step="0.01"
+              className="border rounded px-2 py-1 w-24"
+              value={editValues.totalCost ?? ''}
+              onChange={e => setEditValues(v => ({ ...v, totalCost: e.target.value }))}
+            />
+          );
+        }
+        return <Badge variant="primary">${formatNumber(info.getValue(), 2)}</Badge>;
+      },
     },
     {
       header: <span>Odometer</span>,
       accessorKey: "odometer",
-      cell: info => <Badge variant="secondary">{formatNumber(info.getValue(), 0)} KM</Badge>,
+      cell: info => {
+        const row = info.row.original;
+        if (editingId === row._id) {
+          return (
+            <input
+              type="number"
+              step="1"
+              className="border rounded px-2 py-1 w-24"
+              value={editValues.odometer ?? ''}
+              onChange={e => setEditValues(v => ({ ...v, odometer: e.target.value }))}
+            />
+          );
+        }
+        return <Badge variant="secondary">{formatNumber(info.getValue(), 0)} KM</Badge>;
+      },
     },
     {
       header: <span>Date</span>,
       accessorKey: "pumpedAt",
-      cell: info => <Badge variant="secondary">{formatDateShort(info.getValue())}</Badge>,
+      cell: info => {
+        const row = info.row.original;
+        if (editingId === row._id) {
+          return (
+            <input
+              type="date"
+              className="border rounded px-2 py-1 w-36"
+              value={editValues.pumpedAt ? editValues.pumpedAt.slice(0, 10) : ''}
+              onChange={e => setEditValues(v => ({ ...v, pumpedAt: e.target.value }))}
+            />
+          );
+        }
+        return <Badge variant="secondary">{formatDateShort(info.getValue())}</Badge>;
+      },
     },
     {
       header: <span>By</span>,
       accessorKey: "recordedBy.name",
       cell: info => info.getValue(),
+    },
+    {
+      header: <span>Actions</span>,
+      accessorKey: "actions",
+      cell: info => {
+        const row = info.row.original;
+        if (editingId === row._id) {
+          return (
+            <div className="flex gap-2">
+              <Button size="sm" className="bg-green-600 text-white" onClick={async () => {
+                try {
+                  const updated = {
+                    id: row._id,
+                    liters: Number(editValues.liters),
+                    km_lit: Number(editValues.km_lit),
+                    totalCost: Number(editValues.totalCost),
+                    odometer: Number(editValues.odometer),
+                    pumpedAt: editValues.pumpedAt,
+                  };
+                  const res = await fetch('/api/fuel-transactions', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updated),
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    setFuelTransaction(fuelTransaction => fuelTransaction.map(tx => tx._id === row._id ? { ...tx, ...updated } : tx));
+                    setEditingId(null);
+                    setEditValues({});
+                    toast.success('Transaction updated');
+                  } else {
+                    toast.error(data.message || 'Update failed');
+                  }
+                } catch (err) {
+                  toast.error('Update failed');
+                }
+              }}>Save</Button>
+              <Button size="sm" variant="outline" onClick={() => {
+                setEditingId(null);
+                setEditValues({});
+              }}>Cancel</Button>
+            </div>
+          );
+        }
+        return (
+          <Button size="sm" variant="outline" className="bg-[#02733E] text-white hover:bg-[#02733E]/80" onClick={() => {
+            setEditingId(row._id);
+            setEditValues({
+              liters: row.liters,
+              km_lit: row.km_lit,
+              totalCost: row.totalCost,
+              odometer: row.odometer,
+              pumpedAt: row.pumpedAt ? new Date(row.pumpedAt).toISOString().slice(0, 10) : '',
+            });
+          }}><PencilLine /></Button>
+        );
+      },
     },
   ];
 
@@ -141,16 +316,18 @@ export default function FuelTransactionsPage() {
       filtered = filtered.filter(f => new Date(f.pumpedAt) >= new Date(startDate));
     }
     if (endDate) {
-      // Set endDate to end of the day to include all records on that day
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
       filtered = filtered.filter(f => new Date(f.pumpedAt) <= end);
     }
+    if (selectedVehicleId) {
+      filtered = filtered.filter(f => f.vehicleId && (f.vehicleId._id === selectedVehicleId));
+    }
     setFilteredTransactions(filtered);
-  }, [dateRange, fuelTransaction]);
+  }, [dateRange, fuelTransaction, selectedVehicleId]);
 
   const table = useReactTable({
-    data: (dateRange[0].startDate || dateRange[0].endDate) ? filteredTransactions : fuelTransaction,
+    data: filteredTransactions,
     columns,
     state: { sorting, pagination, columnFilters },
     onSortingChange: setSorting,
@@ -161,8 +338,13 @@ export default function FuelTransactionsPage() {
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     manualPagination: false,
-    pageCount: Math.ceil(fuelTransaction.length / pagination.pageSize),
+    pageCount: Math.ceil(filteredTransactions.length / pagination.pageSize),
   });
+
+  // Summaries for report
+  const totalVehicles = new Set(filteredTransactions.map(tx => tx.vehicleId?._id)).size;
+  const totalLiters = filteredTransactions.reduce((sum, tx) => sum + (Number(tx.liters) || 0), 0);
+  const totalCost = filteredTransactions.reduce((sum, tx) => sum + (Number(tx.totalCost) || 0), 0);
 
   return (
     <div  className="w-full mx-auto mt-2">
@@ -171,22 +353,111 @@ export default function FuelTransactionsPage() {
           <Fuel className="w-5 h-5 md:w-10 md:h-10 text-green-800"  />
           Fuel Consumption
         </h2>
-        {/* Date range picker dropdown */}
-        
-        <Button className="flex items-center gap-2 font-bold text-1xl bg-green-800" onClick={() => setShowModal(true)} >
-          <Fuel style={{ width: 20, height: 20 }} /> <span className="hidden md:block">Fuel Pump</span> 
-        </Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button className="flex items-center gap-2 font-bold text-1xl bg-green-800" onClick={() => setShowModal(true)} >
+            <Fuel style={{ width: 20, height: 20 }} />
+            <span className="hidden md:block">Dispense</span>
+          </Button>
+          <Button className="flex items-center gap-2 font-bold text-1xl bg-green-800" onClick={() => {
+            const selectedVehicle = selectedVehicleId ? vehicles.find(v => v._id === selectedVehicleId) : null;
+            localStorage.setItem('fuelReportData', JSON.stringify({
+              filteredTransactions,
+              dateRange,
+              selectedVehicle,
+              vehicles
+            }));
+            window.open('/fuel-transactions/report', '_blank');
+          }}>
+            <Printer style={{ width: 20, height: 20 }} />
+            <span className="hidden md:block">Print</span>
+          </Button>
+        </div>
       </div>
       <div>
         <div style={{ position: 'relative', zIndex: 20, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+          {/* Vehicle Filter Combobox */}
+          <div className="vehicle-combobox" style={{ position: 'relative', minWidth: 200 }}>
+            <input
+              type="text"
+              value={
+                selectedVehicleId
+                  ? (vehicles.find(v => v._id === selectedVehicleId)?.plate || '') +
+                    (vehicles.find(v => v._id === selectedVehicleId)?.model ? ' - ' + vehicles.find(v => v._id === selectedVehicleId)?.model : '')
+                  : vehicleSearch
+              }
+              onChange={e => {
+                setVehicleSearch(e.target.value);
+                setShowVehicleList(true);
+                setSelectedVehicleId('');
+              }}
+              onFocus={() => setShowVehicleList(true)}
+              placeholder="Search vehicle..."
+              className="border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-700"
+              autoComplete="off"
+              style={{ width: '100%' }}
+              readOnly={!!selectedVehicleId}
+            />
+            {selectedVehicleId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedVehicleId('');
+                  setVehicleSearch('');
+                  setShowVehicleList(false);
+                }}
+                className="ml-2 px-2 py-1 border rounded"
+                style={{ position: 'absolute', right: 4, top: 4, zIndex: 101 }}
+              >
+                Clear
+              </button>
+            )}
+            {showVehicleList && !selectedVehicleId && (
+              <ul
+                style={{
+                  position: 'absolute',
+                  zIndex: 100,
+                  background: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 4,
+                  width: '100%',
+                  maxHeight: 180,
+                  overflowY: 'auto',
+                  margin: 0,
+                  padding: 0,
+                  listStyle: 'none',
+                  top: '110%',
+                  left: 0
+                }}
+              >
+                {filteredVehicles.length === 0 && (
+                  <li style={{ padding: 8, color: '#888' }}>No vehicles found</li>
+                )}
+                {filteredVehicles.map(v => (
+                  <li
+                    key={v._id}
+                    style={{ padding: 8, cursor: 'pointer' }}
+                    onClick={() => {
+                      setSelectedVehicleId(v._id);
+                      setVehicleSearch('');
+                      setShowVehicleList(false);
+                    }}
+                  >
+                    {v.plate} {v.model ? `- ${v.model}` : ''}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          {/* Date Picker Button */}
           <button
             type="button"
-            className="border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-700 hover:bg-gray-100"
+            className="border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-700 hover:bg-gray-100 flex items-center gap-2"
             onClick={() => setShowDatePicker(v => !v)}
           >
-            {dateRange[0].startDate && dateRange[0].endDate
+            <Calendar style={{ width: 18, height: 18 }} />
+            <span className="hidden md:block">{dateRange[0].startDate && dateRange[0].endDate
               ? `${dateRange[0].startDate.toLocaleDateString()} - ${dateRange[0].endDate.toLocaleDateString()}`
-              : 'Select date range'}
+              : 'Select date range'}</span>
           </button>
           {(dateRange[0].startDate || dateRange[0].endDate) && (
             <button
@@ -298,6 +569,9 @@ export default function FuelTransactionsPage() {
           </div>
         </div>
       )}
+      {showReport && (
+        <></>
+      )}
       {/* Modern Card List for Mobile/Tablet */}
       <style>{`
         @media (max-width: 700px) {
@@ -309,7 +583,7 @@ export default function FuelTransactionsPage() {
         }
       `}</style>
       <div className="fuel-card-list" style={{ display: 'none', marginTop: 8 }}>
-        {(dateRange[0].startDate || dateRange[0].endDate ? filteredTransactions : fuelTransaction).map((tx, idx) => (
+        {filteredTransactions.map((tx, idx) => (
           <div key={tx._id || idx} style={{
             background: '#fff',
             borderRadius: 16,

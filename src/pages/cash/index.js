@@ -187,7 +187,7 @@ export default function CashPage() {
         minSize: 40,
         maxSize: 56,
         cell: info => (
-          <span className="font-bold text-green-700">
+          <span className="font-bold text-[#02733E]">
             {formatCurrency(info.row.original.amount || info.row.original.suspenceAmount)}
           </span>
         ),
@@ -691,6 +691,7 @@ export default function CashPage() {
               body.relatedReceiptUrl = fields.relatedReceiptUrl;
               body.amount = suspenceAmount - returnAmount;
             }
+            console.log(body)
             const res = await fetch('/api/cash', {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
