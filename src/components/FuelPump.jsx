@@ -1,24 +1,26 @@
-import React, { useState, useEffect, useContext, useRef } from 'react'
-import { fuelPrice } from '@/lib/constants'
-import AuthContext from "../pages/context/AuthProvider"
-import { toast } from 'sonner'
+import React, { useState, useEffect, useContext, useRef } from "react";
+import { fuelPrice } from "@/lib/constants";
+import AuthContext from "../pages/context/AuthProvider";
+import { toast } from "sonner";
+import { X } from "lucide-react";
+import LoadingComponent from "./LoadingComponent";
 
 // Helper to format date as yyyy-MM-dd
 function formatDate(date) {
-  if (!date) return '';
-  if (typeof date === 'string') return date.slice(0, 10);
+  if (!date) return "";
+  if (typeof date === "string") return date.slice(0, 10);
   return date.toISOString().slice(0, 10);
 }
 
 const FuelPump = () => {
   const { auth } = useContext(AuthContext);
-  
+  console.log(auth)
   const [form, setForm] = useState({
-    vehicleId: '',
-    liters: '',
-    odometer: '',
+    vehicleId: "",
+    liters: "",
+    odometer: "",
     pumpedAt: new Date(),
-    previousOdometer: '',
+    previousOdometer: "",
   });
   const [errors, setErrors] = useState({});
   const [vehicles, setVehicles] = useState([]);
@@ -28,23 +30,24 @@ const FuelPump = () => {
   const [fetchingLast, setFetchingLast] = useState(false);
   const [pricePerLiter, setPricePerLiter] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
-  const [vehicleSearch, setVehicleSearch] = useState('');
+  const [vehicleSearch, setVehicleSearch] = useState("");
   const [showVehicleList, setShowVehicleList] = useState(false);
   const comboboxRef = useRef(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchVehicles = async () => {
       try {
         setLoading(true);
-        const res = await fetch('/api/vehicles');
+        const res = await fetch("/api/vehicles");
         const data = await res.json();
         if (data.success) {
           setVehicles(data.data);
         } else {
-          setFetchError('Failed to fetch vehicles');
+          setFetchError("Failed to fetch vehicles");
         }
       } catch (err) {
-        setFetchError('Failed to fetch vehicles');
+        setFetchError("Failed to fetch vehicles");
       } finally {
         setLoading(false);
       }
@@ -58,14 +61,13 @@ const FuelPump = () => {
       setPricePerLiter(0);
       return;
     }
-    const selectedVehicle = vehicles.find(v => v._id === form.vehicleId);
+    const selectedVehicle = vehicles.find((v) => v._id === form.vehicleId);
     if (!selectedVehicle) {
       setPricePerLiter(0);
       return;
     }
     const fuelType = selectedVehicle.fuelType;
-    const priceObj = fuelPrice.find(f => f.type === fuelType);
-    console.log(priceObj)
+    const priceObj = fuelPrice.find((f) => f.type === fuelType);
     setPricePerLiter(priceObj ? priceObj.price : 0);
   }, [form.vehicleId, vehicles]);
 
@@ -73,7 +75,7 @@ const FuelPump = () => {
   useEffect(() => {
     const liters = parseFloat(form.liters);
     if (!isNaN(liters) && pricePerLiter) {
-      setTotalCost(liters * pricePerLiter);
+      setTotalCost(Math.round(liters * pricePerLiter));
     } else {
       setTotalCost(0);
     }
@@ -82,7 +84,7 @@ const FuelPump = () => {
   useEffect(() => {
     if (!form.vehicleId) {
       setLastTransaction(null);
-      setForm((prev) => ({ ...prev, previousOdometer: '' }));
+      setForm((prev) => ({ ...prev, previousOdometer: "" }));
       return;
     }
     const fetchLastTransaction = async () => {
@@ -90,16 +92,14 @@ const FuelPump = () => {
       try {
         // First, get the latest transaction for the vehicle
         const resList = await fetch(`/api/fuel-transactions/${form.vehicleId}`);
-
-        const dataList = await resList.json();        
-       
+        const dataList = await resList.json();
         setLastTransaction(dataList.data ? [dataList.data] : []);
         if (dataList) {
-          setForm((prev) => ({ ...prev, previousOdometer: '' }));
+          setForm((prev) => ({ ...prev, previousOdometer: "" }));
         }
       } catch (err) {
         setLastTransaction([]);
-        setForm((prev) => ({ ...prev, previousOdometer: '' }));
+        setForm((prev) => ({ ...prev, previousOdometer: "" }));
       } finally {
         setFetchingLast(false);
       }
@@ -108,9 +108,10 @@ const FuelPump = () => {
   }, [form.vehicleId]);
 
   // Get last odometer from lastTransaction array
-  const lastOdometer = Array.isArray(lastTransaction) && lastTransaction.length > 0
-    ? lastTransaction[0]?.odometer
-    : undefined;
+  const lastOdometer =
+    Array.isArray(lastTransaction) && lastTransaction.length > 0
+      ? lastTransaction[0]?.odometer
+      : undefined;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -119,28 +120,36 @@ const FuelPump = () => {
 
   const validate = () => {
     const errs = {};
-    if (!form.vehicleId) errs.vehicleId = 'Vehicle is required';
-    if (!form.liters) errs.liters = 'Liters is required';
-    if (!form.odometer || isNaN(Number(form.odometer))) errs.odometer = 'Odometer is required';
-    if (lastOdometer === undefined && !form.previousOdometer) errs.previousOdometer = 'Previous odometer is required';
-    const prevOdo = lastOdometer !== undefined ? Number(lastOdometer) : Number(form.previousOdometer);
+    if (!form.vehicleId) errs.vehicleId = "Vehicle is required";
+    if (!form.liters) errs.liters = "Liters is required";
+    if (!form.odometer || isNaN(Number(form.odometer)))
+      errs.odometer = "Odometer is required";
+    if (lastOdometer === undefined && !form.previousOdometer)
+      errs.previousOdometer = "Previous odometer is required";
+    const prevOdo =
+      lastOdometer !== undefined
+        ? Number(lastOdometer)
+        : Number(form.previousOdometer);
     if (form.odometer && prevOdo >= Number(form.odometer)) {
-      errs.odometer = 'Odometer must be greater than previous value';
+      errs.odometer = "Odometer must be greater than previous value";
     }
     return errs;
   };
 
-  const filteredVehicles = vehicles.filter(v =>
-    (v.plate + ' ' + (v.model || '')).toLowerCase().includes(vehicleSearch.toLowerCase())
+  const filteredVehicles = vehicles.filter((v) =>
+    (v.plate + " " + (v.model || ""))
+      .toLowerCase()
+      .includes(vehicleSearch.toLowerCase())
   );
 
   useEffect(() => {
     if (!showVehicleList) return;
     function handleClick(e) {
-      if (!comboboxRef.current || !comboboxRef.current.contains(e.target)) setShowVehicleList(false);
+      if (!comboboxRef.current || !comboboxRef.current.contains(e.target))
+        setShowVehicleList(false);
     }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, [showVehicleList]);
 
   const handleSubmit = (e) => {
@@ -148,10 +157,13 @@ const FuelPump = () => {
     const errs = validate();
     setErrors(errs);
     if (Object.keys(errs).length === 0) {
-      const prevOdo = lastOdometer !== undefined ? Number(lastOdometer) : Number(form.previousOdometer);
+      setSubmitting(true);
+      const prevOdo =
+        lastOdometer !== undefined
+          ? Number(lastOdometer)
+          : Number(form.previousOdometer);
       const km = Number(form.odometer) - prevOdo;
-      const km_lit = km / Number(form.liters);
-      
+      const km_lit = Number((km / Number(form.liters)).toFixed(2));
 
       const payload = {
         ...form,
@@ -164,138 +176,85 @@ const FuelPump = () => {
         previousOdometer: undefined, // don't send to API
         pumpedAt: form.pumpedAt ? form.pumpedAt : new Date(),
       };
-      // For now, just log the form values and km_lit
-      // You can call a prop or API here
-      fetch('/api/fuel-transactions', {
-        method: 'POST',
+      fetch("/api/fuel-transactions", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
       })
         .then(async (res) => {
           const result = await res.json();
           if (res.ok) {
-            toast.success('Fuel transaction recorded successfully!');
+            toast.success("Fuel transaction recorded successfully!");
             setForm({
-              vehicleId: '',
-              liters: '',
-              odometer: '',
+              vehicleId: "",
+              liters: "",
+              odometer: "",
               pumpedAt: new Date(),
-              previousOdometer: '',
+              previousOdometer: "",
             });
             setTimeout(() => {
               window.location.reload();
             }, 1200);
           } else {
-            toast.error(result.message || 'Failed to record fuel transaction.');
+            toast.error(result.message || "Failed to record fuel transaction.");
+            setSubmitting(false);
           }
         })
         .catch(() => {
-          toast.error('Failed to record fuel transaction.');
+          toast.error("Failed to record fuel transaction.");
+          setSubmitting(false);
         });
     }
   };
 
-
-
   return (
     <form
       onSubmit={handleSubmit}
-      style={{
-        background: '#fff',
-        borderRadius: 16,
-        boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-        padding: 24,
-        maxWidth: 400,
-        margin: '0 auto',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 18,
-        border: '1px solid #e2e8f0',
-      }}
+      className="flex flex-col gap-1  rounded-lg p-4 "
     >
-      <style>{`
-        @media (min-width: 500px) {
-          .fuel-form-row {
-            display: flex;
-            gap: 16px;
-          }
-          .fuel-form-row > label {
-            flex: 1 1 0;
-            margin-bottom: 0 !important;
-          }
-        }
-        @media (max-width: 499px) {
-          .fuel-form-row {
-            display: block;
-          }
-        }
-      `}</style>
-      <h3 style={{ fontWeight: 700, fontSize: 22, marginBottom: 8, color: '#1a202c', textAlign: 'center', letterSpacing: 1 }}>Fuel Pump</h3>
       {/* Info boxes for price per liter and total cost */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 8, justifyContent: 'center' }}>
-        <div style={{
-          background: '#f3f3f3',
-          borderRadius: 8,
-          padding: '8px 16px',
-          fontWeight: 600,
-          color: '#2d3748',
-          fontSize: 15,
-          border: '1px solid #e2e8f0',
-          minWidth: 0,
-        }}>
-          Price per Liter: <span style={{ color: '#3182ce', fontWeight: 700 }}>{pricePerLiter}</span>
+      <div className="flex gap-1 justify-between border-b border-[#F26B5E] ">
+      <h3 className="text-1xl font-bold text-center text-[#02733E]">Fuel Pump</h3>
+        
+        <div>
+        <span className="text-[#02733E] font-bold">{pricePerLiter} / liter</span>  
+        
         </div>
-        <div style={{
-          background: '#f3f3f3',
-          borderRadius: 8,
-          padding: '8px 16px',
-          fontWeight: 600,
-          color: '#2d3748',
-          fontSize: 15,
-          border: '1px solid #e2e8f0',
-          minWidth: 0,
-        }}>
-          Total Cost: <span style={{ color: '#3182ce', fontWeight: 700 }}>{totalCost}</span>
-        </div>
+          
       </div>
       {/* Vehicle row */}
-      <label style={{ fontWeight: 600, color: '#2d3748', fontSize: 15, marginBottom: 12 }}>
+      <div className="flex justify-between gap-1">
+      <label className="font-semibold text-gray-700 text-sm mb-1 w-full">
         Vehicle
         {loading ? (
-          <span style={{ marginLeft: 8 }}>Loading vehicles...</span>
+          <LoadingComponent />
         ) : fetchError ? (
-          <span style={{ color: 'red', marginLeft: 8 }}>{fetchError}</span>
+          <span className="ml-8 text-red-500">{fetchError}</span>
         ) : vehicles.length === 0 ? (
-          <span style={{ marginLeft: 8 }}>No vehicles found</span>
+          <span className="ml-8">No vehicles found</span>
         ) : (
-          <div ref={comboboxRef} style={{ position: 'relative', minWidth: 200 }}>
+          <div ref={comboboxRef} className="relative ">
             <input
               type="text"
               value={
                 form.vehicleId
-                  ? (vehicles.find(v => v._id === form.vehicleId)?.plate || '') +
-                    (vehicles.find(v => v._id === form.vehicleId)?.model ? ' - ' + vehicles.find(v => v._id === form.vehicleId)?.model : '')
+                  ? (vehicles.find((v) => v._id === form.vehicleId)?.plate || "") +
+                    (vehicles.find((v) => v._id === form.vehicleId)?.model
+                      ? " - " +
+                        vehicles.find((v) => v._id === form.vehicleId)?.model
+                      : "")
                   : vehicleSearch
               }
-              onChange={e => {
+              onChange={(e) => {
                 setVehicleSearch(e.target.value);
                 setShowVehicleList(true);
-                setForm(prev => ({ ...prev, vehicleId: '' }));
+                setForm((prev) => ({ ...prev, vehicleId: "" }));
               }}
               onFocus={() => setShowVehicleList(true)}
               placeholder="Search vehicle..."
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                borderRadius: 8,
-                border: '1px solid #e2e8f0',
-                marginTop: 6,
-                fontSize: 15,
-                background: '#f9fafb',
-                outline: 'none',
-              }}
+              className="p-2 rounded-lg border border-gray-400 mt-1 text-sm bg-[#FBFBFB] text-[#02733E] outline-none w-full"
               autoComplete="off"
               readOnly={!!form.vehicleId}
               required
@@ -304,91 +263,85 @@ const FuelPump = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setForm(prev => ({ ...prev, vehicleId: '' }));
-                  setVehicleSearch('');
+                  setForm((prev) => ({ ...prev, vehicleId: "" }));
+                  setVehicleSearch("");
                   setShowVehicleList(false);
                 }}
-                style={{ position: 'absolute', right: 8, top: 16, zIndex: 101, background: 'transparent', border: 'none', cursor: 'pointer', color: '#888' }}
+                className="absolute right-2 top-4 z-101 bg-transparent border-none cursor-pointer text-gray-500"
               >
                 ×
               </button>
             )}
             {showVehicleList && !form.vehicleId && (
-              <ul
-                style={{
-                  position: 'absolute',
-                  zIndex: 100,
-                  background: 'white',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 4,
-                  width: '100%',
-                  maxHeight: 180,
-                  overflowY: 'auto',
-                  margin: 0,
-                  padding: 0,
-                  listStyle: 'none',
-                  top: '110%',
-                  left: 0
-                }}
-              >
+              <ul className="absolute z-100 bg-white border border-gray-200 rounded-lg w-full max-h-48 overflow-y-auto mt-2 p-0 list-none top-14 left-0">
                 {filteredVehicles.length === 0 && (
-                  <li style={{ padding: 8, color: '#888' }}>No vehicles found</li>
+                  <li className="p-2 text-gray-500">No vehicles found</li>
                 )}
-                {filteredVehicles.map(v => (
+                {filteredVehicles.map((v) => (
                   <li
                     key={v._id}
-                    style={{ padding: 8, cursor: 'pointer' }}
+                    className="p-2 cursor-pointer"
                     onClick={() => {
-                      setForm(prev => ({ ...prev, vehicleId: v._id }));
-                      setVehicleSearch('');
+                      setForm((prev) => ({ ...prev, vehicleId: v._id }));
+                      setVehicleSearch("");
                       setShowVehicleList(false);
                     }}
                   >
-                    {v.plate} {v.model ? `- ${v.model}` : ''}
+                    {v.plate} {v.model ? `- ${v.model}` : ""}
                   </li>
                 ))}
               </ul>
             )}
           </div>
         )}
-        {errors.vehicleId && <span style={{ color: 'red', marginLeft: 8 }}>{errors.vehicleId}</span>}
+        {errors.vehicleId && (
+          <span className="ml-8 text-red-500">{errors.vehicleId}</span>
+        )}
       </label>
+      <label className="font-semibold text-gray-700 text-sm mb-1 w-full">
+          Date
+          <input
+            name="pumpedAt"
+            type="date"
+            value={formatDate(form.pumpedAt)}
+            onChange={handleChange}
+            className="w-full p-2 rounded-lg border border-gray-200 mt-2 text-sm bg-white outline-none"
+          />
+        </label>
+      </div>
       {/* Previous odometer and Odometer in one row */}
       {form.vehicleId && (
-        <div className="fuel-form-row" style={{ gap: 16 }}>
-          <div style={{ flex: 1 }}>
+        <div className="flex" style={{ gap: 16 }}>
             {fetchingLast ? (
-              <span style={{ fontSize: 12 }}>Fetching last transaction...</span>
+              <LoadingComponent />
             ) : (
-              <label style={{ fontWeight: 500, color: '#2d3748', fontSize: 13, marginBottom: 0, display: 'flex', flexDirection: 'column', width: '100%' }}>
-                <span style={{ marginBottom: 2 }}>Previous odometer (KM)</span>
+              <label className="font-medium text-gray-700 text-sm mb-0 flex flex-col w-full">
+                <span className="mb-1">Previous (KM)</span>
                 <input
                   name="previousOdometer"
-                  value={lastOdometer !== undefined ? lastOdometer : form.previousOdometer}
+                  value={
+                    lastOdometer !== undefined
+                      ? lastOdometer
+                      : form.previousOdometer
+                  }
                   onChange={handleChange}
                   type="number"
                   min="0"
                   step="1"
                   required
                   readOnly={lastOdometer !== undefined}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: 8,
-                    border: '1px solid #e2e8f0',
-                    marginTop: 6,
-                    fontSize: 15,
-                    background: lastOdometer !== undefined ? '#f3f3f3' : '#f9fafb',
-                    outline: 'none',
-                  }}
+                  className="w-full p-2 rounded-lg border border-gray-200 mt-1 text-sm bg-white outline-none"
                 />
-                {errors.previousOdometer && <span style={{ color: 'red', marginLeft: 4, fontSize: 12 }}>{errors.previousOdometer}</span>}
+                {errors.previousOdometer && (
+                  <span className="ml-2 text-red-500 text-sm">
+                    {errors.previousOdometer}
+                  </span>
+                )}
               </label>
             )}
-          </div>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontWeight: 600, color: '#2d3748', fontSize: 15, marginBottom: 12, width: '100%' }}>
-              Odometer (KM)
+          
+            <label className="font-semibold text-gray-700 text-sm mb-3 w-full">
+              KM
               <input
                 name="odometer"
                 value={form.odometer}
@@ -397,43 +350,20 @@ const FuelPump = () => {
                 min="0"
                 step="1"
                 required
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: 8,
-                  border: '1px solid #e2e8f0',
-                  marginTop: 6,
-                  fontSize: 15,
-                  background: '#f9fafb',
-                  outline: 'none',
-                }}
+                className="w-full p-2 rounded-lg border border-gray-400 mt-2 text-sm bg-[#FBFBFB] text-[#02733E] outline-none"
               />
-              {errors.odometer && <span style={{ color: 'red', marginLeft: 8 }}>{errors.odometer}</span>}
+              {errors.odometer && (
+                <span className="ml-2 text-red-500 text-sm">
+                  {errors.odometer}
+                </span>
+              )}
             </label>
-          </div>
+          
         </div>
       )}
-      <div className="fuel-form-row">
-        <label style={{ fontWeight: 600, color: '#2d3748', fontSize: 15, marginBottom: 12 }}>
-          Date
-          <input
-            name="pumpedAt"
-            type="date"
-            value={formatDate(form.pumpedAt)}
-            onChange={handleChange}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              borderRadius: 8,
-              border: '1px solid #e2e8f0',
-              marginTop: 6,
-              fontSize: 15,
-              background: '#f9fafb',
-              outline: 'none',
-            }}
-          />
-        </label>
-        <label style={{ fontWeight: 600, color: '#2d3748', fontSize: 15, marginBottom: 12 }}>
+      <div className="flex gap-4">
+        
+        <label className="font-semibold text-gray-700 text-sm mb-3 w-full">
           Liters
           <input
             name="liters"
@@ -443,65 +373,55 @@ const FuelPump = () => {
             min="0"
             step="any"
             required
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              borderRadius: 8,
-              border: '1px solid #e2e8f0',
-              marginTop: 6,
-              fontSize: 15,
-              background: '#f9fafb',
-              outline: 'none',
-            }}
+            className="w-full p-2 rounded-lg border border-gray-400 mt-2 text-sm bg-[#FBFBFB] text-[#02733E] outline-none"
           />
-          {errors.liters && <span style={{ color: 'red', marginLeft: 8 }}>{errors.liters}</span>}
+          {errors.liters && (
+            <span className="ml-2 text-red-500 text-sm">{errors.liters}</span>
+          )}
+        </label>
+        <label className="font-semibold text-gray-700 text-sm mb-3 w-full">
+        Total Cost
+        <input
+          name="totalCost"
+          value={totalCost}
+          onChange={e => {
+            const value = e.target.value;
+            setTotalCost(Math.round(Number(value)));
+          }}
+          type="number"
+          min="0"
+          step="any"
+          className="w-full p-2 rounded-lg border border-gray-200 mt-2 text-sm bg-white outline-none"
+        />
         </label>
       </div>
-      
-      <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
-      <button
+
+      <div className="flex justify-between gap-4 mt-2 border-t border-[#f26a5e73] pt-2">
+        <button
           type="button"
-          onClick={() => setForm({ vehicleId: '', liters: '', odometer: '', pumpedAt: new Date(), previousOdometer: '' })}
-          style={{
-            background: '#e2e8f0',
-            color: '#2d3748',
-            border: 'none',
-            borderRadius: 8,
-            padding: '12px 0',
-            fontWeight: 700,
-            fontSize: 17,
-            letterSpacing: 1,
-            cursor: 'pointer',
-            boxShadow: '0 1px 4px rgba(226,232,240,0.08)',
-            transition: 'background 0.2s',
-            flex: 1,
-          }}
+          onClick={() =>
+            setForm({
+              vehicleId: "",
+              liters: "",
+              odometer: "",
+              pumpedAt: new Date(),
+              previousOdometer: "",
+            })
+          }
+          className="bg-[#F26B5E] text-gray-900 border border-gray-200 rounded-lg p-2 font-semibold text-sm "
         >
-          Clear
+           <X />
         </button>
         <button
           type="submit"
-          style={{
-            background: '#3182ce',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 8,
-            padding: '12px 0',
-            fontWeight: 700,
-            fontSize: 17,
-            letterSpacing: 1,
-            cursor: 'pointer',
-            boxShadow: '0 1px 4px rgba(49,130,206,0.08)',
-            transition: 'background 0.2s',
-            flex: 1,
-          }}
+          className="bg-[#02733E] text-white border border-[#038C4C] rounded-lg p-2 font-semibold text-sm disabled:bg-[#D1D8BE] disabled:cursor-not-allowed"
+          disabled={submitting}
         >
-          Submit
+          {submitting ? <LoadingComponent /> : "Submit"}
         </button>
-  
       </div>
     </form>
   );
 };
 
-export default FuelPump
+export default FuelPump;

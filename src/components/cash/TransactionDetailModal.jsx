@@ -1,6 +1,8 @@
 import React from 'react';
 
 export default function TransactionDetailModal({ open, transaction, onClose }) {
+  
+  
   if (!open || !transaction) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-y-auto">

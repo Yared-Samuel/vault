@@ -3,20 +3,22 @@ import { useRouter } from "next/router";
 import AuthContext from "../../context/AuthProvider";
 import { Button } from "@/components/ui/button";
 import {
-  PlusCircle,
   Trash2,
-  XCircle,
-  User,
-  Calendar,
-  Truck,
   FilePlus,
 } from "lucide-react";
-
+import {
+  paymentTypesModel,
+  vehicleComponentsCatagory,
+  transactionAction,
+  vehicleComponents,
+} from "@/lib/constants";
+import { toast } from "sonner";
 export default function NewTransactionRequestPage() {
   const { auth } = useContext(AuthContext);
   const router = useRouter();
   const [form, setForm] = useState({
     transactionSource: "cashAccount",
+    paymentCategory: "",
     status: "",
     cashAccount: "",
     checkRequestId: "",
@@ -28,7 +30,6 @@ export default function NewTransactionRequestPage() {
     amount: "",
     to: "",
     reason: "",
-    relatedReceiptUrl: "",
     approvedBy: "",
     requestedBy: auth?.id || "",
     createdBy: auth?.id || "",
@@ -124,16 +125,19 @@ export default function NewTransactionRequestPage() {
           requestedBy: formEntry.requestedBy,
           requestedAt: formEntry.requestedAt,
           createdBy: auth?.id,
+          paymentCategory: formEntry.paymentCategory,
         };
         const selectedUser = users.find((u) => u._id === formEntry.requestedBy);
         const isTransporter = selectedUser?.role === "transporter";
-        if (isTransporter) {
-          payload.vehicleId = formEntry.vehicleId;
-          if (vehicleRows.length > 0) {
-            payload.vehicleMaintenance = vehicleRows;
-          } else if (vehicleRow.vehicleId && vehicleRow.description && vehicleRow.amount) {
-            payload.vehicleMaintenance = [vehicleRow];
-          }
+        payload.vehicleId = formEntry.vehicleId;
+        if (vehicleRows.length > 0) {
+          payload.vehicleMaintenance = vehicleRows;
+        } else if (
+          vehicleRow.vehicleId &&
+          vehicleRow.description &&
+          vehicleRow.amount
+        ) {
+          payload.vehicleMaintenance = [vehicleRow];
         }
         if (formEntry.type === "receipt_payment") {
           payload.amount = formEntry.amount;
@@ -143,9 +147,9 @@ export default function NewTransactionRequestPage() {
         } else if (formEntry.type === "suspence_payment") {
           payload.suspenceAmount = formEntry.suspenceAmount;
           payload.quantity = Number(formEntry.quantity);
+          payload.vehicleMaintenance = vehicleRows;
         }
         // TODO: handle file upload for relatedReceiptFile if needed
-        console.log(payload)
         try {
           const res = await fetch("/api/transactions", {
             method: "POST",
@@ -214,6 +218,7 @@ export default function NewTransactionRequestPage() {
   const [commonFields, setCommonFields] = useState({
     requestedBy: form.requestedBy || "",
     requestedAt: form.requestedAt || new Date().toISOString().split("T")[0],
+    paymentCategory: "",
   });
   // Single entry
   const [entry, setEntry] = useState({ ...defaultEntry });
@@ -246,6 +251,7 @@ export default function NewTransactionRequestPage() {
     setCommonFields({
       requestedBy: "",
       requestedAt: new Date().toISOString().split("T")[0],
+      paymentCategory: "",
     });
     setEntry({ ...defaultEntry });
     setPaymentType("");
@@ -257,8 +263,13 @@ export default function NewTransactionRequestPage() {
   // --- Begin vehicle-description-amount add section ---
   const [vehicleRow, setVehicleRow] = useState({
     vehicleId: "",
+    action: "",
+    vehicleComponentCategory: "",
+    vehicleComponents: "",
     description: "",
     amount: "",
+    km: "",
+    qty: 1,
   });
   const [vehicleRows, setVehicleRows] = useState([]);
 
@@ -269,10 +280,30 @@ export default function NewTransactionRequestPage() {
 
   const handleAddVehicleRow = (e) => {
     e.preventDefault();
-    if (!vehicleRow.vehicleId || !vehicleRow.description || !vehicleRow.amount)
-      return;
+    if (commonFields.paymentCategory === "vehicleMaintenance") {
+      if (
+        !vehicleRow.vehicleId ||
+        !vehicleRow.description ||
+        !vehicleRow.amount
+      )
+        return;
+    } else {
+      if (!vehicleRow.description || !vehicleRow.amount) return;
+    }
+    // This line adds a new vehicle row to the existing array of vehicle rows
+    // It uses the spread operator (...) to create a new array containing all previous rows
+    // and appends the current vehicleRow object to the end
     setVehicleRows((prev) => [...prev, vehicleRow]);
-    setVehicleRow({ vehicleId: "", description: "", amount: "" });
+    setVehicleRow({
+      vehicleId: "",
+      action: "",
+      vehicleComponentCategory: "",
+      vehicleComponents: "",
+      description: "",
+      amount: "",
+      km: "",
+      qty: 1,
+    });
   };
 
   // Add the remove handler
@@ -280,22 +311,39 @@ export default function NewTransactionRequestPage() {
     setVehicleRows((prev) => prev.filter((_, i) => i !== idx));
   };
   // --- End vehicle-description-amount add section ---
+  const filteredVehicleComponents = vehicleRow.vehicleComponentCategory
+    ? vehicleComponents.filter(
+        (item) => item.category === vehicleRow.vehicleComponentCategory
+      )
+    : [];
+
+  // Add useEffect to reset vehicleRow when paymentCategory changes
+  useEffect(() => {
+    setVehicleRow({
+      vehicleId: "",
+      action: "",
+      vehicleComponentCategory: "",
+      vehicleComponents: "",
+      description: "",
+      amount: "",
+      km: "",
+      qty: 1,
+    });
+  }, [commonFields.paymentCategory]);
 
   return (
-    <div
-      className="w-full"
-      
-    >
+    <div className="w-full">
       <div className="flex items-center justify-between">
-        <h2 className="text-md font-extrabold flex items-center gap-2 text-blue-900">
-          <FilePlus className="text-blue-500" size={20} />Payment Request
+        <h2 className="text-md font-extrabold flex items-center gap-2 text-[#02733E]">
+          <FilePlus className="text-blue-500" size={20} />
+          Payment Request
         </h2>
         {/* Payment Type Selection */}
         <div className="flex gap-8 justify-center">
           <label
             className={`flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer border transition-all ${
               paymentType === "receipt_payment"
-                ? "bg-blue-100 border-blue-400 text-blue-900 font-light shadow"
+                ? "bg-blue-100 border-blue-400 text-[#02733E] font-light shadow"
                 : "bg-gray-50 border-gray-200 hover:bg-blue-50"
             }`}
             title="Request for a receipt payment"
@@ -313,7 +361,7 @@ export default function NewTransactionRequestPage() {
           <label
             className={`flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer border transition-all ${
               paymentType === "suspence_payment"
-                ? "bg-blue-100 border-blue-400 text-blue-900 font-light shadow"
+                ? "bg-blue-100 border-blue-400 text-[#02733E] font-light shadow"
                 : "bg-gray-50 border-gray-200 hover:bg-blue-50"
             }`}
             title="Request for a suspence payment"
@@ -335,7 +383,7 @@ export default function NewTransactionRequestPage() {
         <form
           onSubmit={(e) => {
             let hasError = false;
-      
+
             if (
               !entry.quantity ||
               isNaN(Number(entry.quantity)) ||
@@ -358,6 +406,7 @@ export default function NewTransactionRequestPage() {
               createdBy: auth?.id,
               requestedBy: commonFields.requestedBy,
               requestedAt: commonFields.requestedAt,
+              paymentCategory: commonFields.paymentCategory,
             };
             // Call onSubmit with the single entry in an array
             e.preventDefault();
@@ -370,15 +419,12 @@ export default function NewTransactionRequestPage() {
           <div className="flex flex-col gap-4 bg-[#FFFFFF] rounded-lg p-4 mb-2 border border-gray-100">
             <div className="flex justify-between items-center">
               <div className="flex items-start justify-items-start gap-3">
-                <div className="flex items-center mb-2">
-                  <label className="text-blue-900 font-light whitespace-nowrap min-w-[100px] flex items-center gap-1">
-                    <User size={18} /> Requester
-                  </label>
+                <div className="flex-1 mb-2">
                   <select
                     name="requestedBy"
                     value={commonFields.requestedBy}
                     onChange={handleCommonChange}
-                    className="flex-1 w-full border border-gray-300 rounded px-2 py-2 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
+                    className="flex-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
                     required
                     disabled={isTransporter}
                   >
@@ -390,296 +436,467 @@ export default function NewTransactionRequestPage() {
                     ))}
                   </select>
                 </div>
-                <div className="flex items-center mb-2">
-                  <label className="text-blue-900 font-light whitespace-nowrap min-w-[70px] flex items-center gap-1">
-                    <Calendar size={18} /> Date
-                  </label>
+                <div className="flex-1 mb-2">
                   <input
                     type="date"
                     name="requestedAt"
                     value={commonFields.requestedAt}
                     onChange={handleCommonChange}
-                    className="flex-1 w-full border border-gray-300 rounded px-2 py-2 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
+                    className="flex-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
                     required
                   />
                 </div>
+                <div className="flex-1 mb-2">
+                  <select
+                    name="paymentCategory"
+                    value={commonFields.paymentCategory}
+                    onChange={handleCommonChange}
+                    className="flex-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    {paymentTypesModel.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <Button
+              <button
                 type="submit"
-                className="flex items-center gap-2 bg-white text-black font-bold px-1 py-7 rounded-lg transition border border-gray-300 cursor-pointer hover:white disabled:opacity-60"
+                className="flex items-center gap-1 bg-white text-black font-bold px-1 py-2 rounded-lg transition border border-gray-300 cursor-pointer hover:bg-[#EEEFE0] disabled:opacity-60"
                 disabled={submitting}
               >
                 <FilePlus size={20} /> {submitting ? "Saving..." : "Save"}
-              </Button>
+              </button>
             </div>
-            <div className="flex items-start justify-between gap-3">
-              <div className=" relative bg-white border-2 border-blue-100 rounded-xl shadow-sm p-5 transition hover:shadow-lg group">
+            <div className="flex  flex-col bg-white border-2 border-blue-100 rounded-xl shadow-sm p-5 transition hover:shadow-lg">
+              <div className="flex justify-between  group">
                 {/* Fields for receipt_payment */}
-                {paymentType === "receipt_payment" && (
-                  <>
-                    <div className="flex items-center gap-2 mb-2">
-                      <label className="text-[#444444] text-sm font-bold whitespace-nowrap min-w-[70px]">
-                        Amount
-                      </label>
-                      <input
-                        type="number"
-                        name="amount"
-                        value={entry.amount}
-                        onChange={handleEntryChange}
-                        placeholder="Amount in cash"
-                        className="flex-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
-                        required
-                      />
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <label className="text-[#444444] text-sm font-bold whitespace-nowrap min-w-[70px]">
-                        Quantity
-                      </label>
-                      <input
-                        type="number"
-                        name="quantity"
-                        value={entry.quantity || ""}
-                        onChange={handleEntryChange}
-                        placeholder="Quantity"
-                        className="flex-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
-                        required
-                      />
-                      {quantityError && (
-                        <div className="text-red-500 text-xs mt-1">
-                          {quantityError}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <label className="text-[#444444] text-sm font-bold whitespace-nowrap min-w-[70px]">
-                        Reference
-                      </label>
-                      <input
-                        type="text"
-                        name="recept_reference"
-                        value={entry.recept_reference || ""}
-                        onChange={handleEntryChange}
-                        placeholder="Receipt Reference"
-                        className="flex-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <label className="text-[#444444] text-sm font-bold whitespace-nowrap min-w-[70px]">
-                        To
-                      </label>
-                      <input
-                        type="text"
-                        name="to"
-                        value={entry.to}
-                        onChange={handleEntryChange}
-                        placeholder="Recipient of the payment"
-                        className="flex-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
-                        required
-                      />
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <label className="text-[#444444] text-sm font-bold whitespace-nowrap min-w-[70px]">
-                        Reason
-                      </label>
-                      <input
-                        type="text"
-                        name="reason"
-                        value={entry.reason}
-                        onChange={handleEntryChange}
-                        placeholder="Reason for the payment "
-                        className="flex-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
-                        required
-                      />
-                    </div>
-                  </>
-                )}
-                {/* Fields for suspence_payment */}
-                {paymentType === "suspence_payment" && (
-                  <>
-                    <div className="flex items-center gap-2 mb-2">
-                      <label className="text-[#444444] text-sm font-bold whitespace-nowrap min-w-[70px]">
-                        Amount
-                      </label>
-                      <input
-                        type="number"
-                        name="suspenceAmount"
-                        value={entry.suspenceAmount}
-                        onChange={handleEntryChange}
-                        placeholder="Amount in cash"
-                        className="flex-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
-                        required
-                      />
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <label className="text-[#444444] text-sm font-bold whitespace-nowrap min-w-[70px]">
-                        Quantity
-                      </label>
-                      <input
-                        type="number"
-                        name="quantity"
-                        value={entry.quantity || ""}
-                        onChange={handleEntryChange}
-                        placeholder="Quantity"
-                        className="flex-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
-                        required
-                      />
-                      {quantityError && (
-                        <div className="text-red-500 text-xs mt-1">
-                          {quantityError}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <label className="text-[#444444] text-sm font-bold whitespace-nowrap min-w-[70px]">
-                        Reason
-                      </label>
-                      <input
-                        type="text"
-                        name="reason"
-                        value={entry.reason}
-                        onChange={handleEntryChange}
-                        placeholder="Reason for the payment"
-                        className="flex-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
-                        required
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
+                <div
+                  className={`gap-2 mb-2 ${
+                    paymentType === "suspence_payment" ? "hidden" : ""
+                  }`}
+                >
+                  <div className="relative z-0 w-full mb-5 group">
+                    <input
+                      type="number"
+                      name="amount"
+                      value={entry.amount}
+                      onChange={handleEntryChange}
+                      placeholder=" "
+                      className="block py-2 px-0 w-full text-sm text-black bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-[#02733E] peer"
+                      required={paymentType === "receipt_payment"}
+                    />
+                    <label
+                      htmlFor="amount"
+                      className="peer-focus:font-medium absolute text-lg text-black font-bold duration-300 transform -translate-y-6 scale-75 top-1 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-[#02733E] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                    >
+                      Amount
+                    </label>
+                  </div>
+                </div>
 
-              <div className="block ">
-                {isTransporter && (
-                  <>
-                    <div className="flex items-end gap-3 mb-4">
-                      <div className="flex flex-col" style={{ minWidth: 180 }}>
-                        <label className="text-[#444444] text-sm font-bold mb-1">
-                          Vehicle
-                        </label>
-                        <select
-                          name="vehicleId"
-                          value={vehicleRow.vehicleId}
-                          onChange={handleVehicleRowChange}
-                          className="border border-gray-300 rounded px-2 py-2 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white min-w-[140px] max-w-[200px]"
-                        >
-                          <option value="">Select Vehicle</option>
-                          {vehicles.map((vehicle) => (
-                            <option key={vehicle._id} value={vehicle._id}>
-                              {vehicle.plate}
-                              {vehicle.model ? ` - ${vehicle.model}` : ""}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex flex-col" style={{ minWidth: 180 }}>
-                        <label className="text-[#444444] text-sm font-bold mb-1">
-                          Description
-                        </label>
-                        <input
-                          type="text"
-                          name="description"
-                          value={vehicleRow.description}
-                          onChange={handleVehicleRowChange}
-                          className="border border-gray-300 rounded px-2 py-2 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white min-w-[140px] max-w-[200px]"
-                          placeholder="Description"
-                        />
-                      </div>
-                      <div className="flex flex-col" style={{ minWidth: 120 }}>
-                        <label className="text-[#444444] text-sm font-bold mb-1">
-                          Amount
-                        </label>
-                        <input
-                          type="number"
-                          name="amount"
-                          value={vehicleRow.amount}
-                          onChange={handleVehicleRowChange}
-                          className="border border-gray-300 rounded px-2 py-2 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white min-w-[80px] max-w-[120px]"
-                          placeholder="Amount"
-                        />
-                      </div>
-                      <button
-                        className="ml-2 px-4 py-1  text-blue-700 rounded hover:bg-gray-100 transition font-bold border border-blue-700 cursor-pointer"
-                        onClick={handleAddVehicleRow}
-                        type="button"
-                      >
-                        Add
-                      </button>
-                    </div>
-                    {/* Table of added rows */}
-                    {vehicleRows.length > 0 && (
-                      <div className="overflow-x-auto mb-4">
-                        <table className="min-w-full border border-gray-200 rounded">
-                          <thead>
-                            <tr className="bg-gray-50">
-                              <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
-                                Vehicle
-                              </th>
-                              <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
-                                Description
-                              </th>
-                              <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
-                                Amount
-                              </th>
-                              <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
-                                Remove
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {vehicleRows.map((row, idx) => {
-                              const vehicle = vehicles.find(
-                                (v) => v._id === row.vehicleId
-                              );
-                              return (
-                                <tr key={idx} className="border-t">
-                                  <td className="px-4 py-2 text-sm">
-                                    {vehicle
-                                      ? `${vehicle.plate}${
-                                          vehicle.model
-                                            ? " - " + vehicle.model
-                                            : ""
-                                        }`
-                                      : ""}
-                                  </td>
-                                  <td className="px-4 py-2 text-sm">
-                                    {row.description}
-                                  </td>
-                                  <td className="px-4 py-2 text-sm">
-                                    {row.amount}
-                                  </td>
-                                  <td className="px-4 py-2 text-sm">
-                                    <button
-                                      type="button"
-                                      className="text-red-500 hover:text-red-700"
-                                      onClick={() =>
-                                        handleRemoveVehicleRow(idx)
-                                      }
-                                      title="Remove"
-                                    >
-                                      <Trash2 size={18} />
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                <div
+                  className={`gap-2 mb-2 ${
+                    paymentType === "suspence_payment" ? "hidden" : ""
+                  }`}
+                >
+                  <div className="relative z-0 w-full mb-5 group">
+                    <input
+                      type="text"
+                      name="recept_reference"
+                      value={entry.recept_reference || ""}
+                      onChange={handleEntryChange}
+                      placeholder=""
+                      className="block py-2.5 px-0 w-full text-sm text-black bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-[#02733E] peer"
+                      required={paymentType === "receipt_payment"}
+                    />
+                    <label
+                      htmlFor="amount"
+                      className="peer-focus:font-medium absolute text-lg text-black font-bold duration-300 transform -translate-y-6 scale-75 top-1 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-[#02733E] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                    >
+                      Reference
+                    </label>
+                  </div>
+                </div>
+                <div
+                  className={`gap-2 mb-2 ${
+                    paymentType === "suspence_payment" ? "hidden" : ""
+                  }`}
+                >
+                  <div className="relative z-0 w-full mb-5 group">
+                    <input
+                      type="text"
+                      name="to"
+                      value={entry.to}
+                      onChange={handleEntryChange}
+                      placeholder=""
+                      className="block py-2.5 px-0 w-full text-sm text-black bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-[#02733E] peer"
+                      required={paymentType === "receipt_payment"}
+                    />
+                    <label
+                      htmlFor="amount"
+                      className="peer-focus:font-medium absolute text-lg text-black font-bold duration-300 transform -translate-y-6 scale-75 top-1 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-[#02733E] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                    >
+                      Paid To
+                    </label>
+                  </div>
+                </div>
+
+                {/* Fields for suspence_payment */}
+
+                <div
+                  className={`gap-2 mb-2 ${
+                    paymentType === "receipt_payment" ? "hidden" : ""
+                  }`}
+                >
+                  <div className="relative z-0 w-full mb-5 group">
+                    <input
+                      type="number"
+                      name="suspenceAmount"
+                      value={entry.suspenceAmount}
+                      onChange={handleEntryChange}
+                      placeholder=" "
+                      className="block py-2.5 px-0 w-full text-sm text-black bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-[#02733E] peer"
+                      required={paymentType === "suspence_payment"}
+                    />
+                    <label
+                      htmlFor="suspenceAmount"
+                      className="peer-focus:font-medium absolute text-lg text-black font-bold duration-300 transform -translate-y-6 scale-75 top-1 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-[#02733E] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                    >
+                      Amount
+                    </label>
+                  </div>
+                </div>
+                <div className={`gap-2 mb-2`}>
+                  <div className="relative z-0 w-full mb-5 group">
+                    <input
+                      type="number"
+                      name="quantity"
+                      value={entry.quantity || ""}
+                      onChange={handleEntryChange}
+                      placeholder=""
+                      className="block py-2.5 px-0 w-full text-sm text-black bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-[#02733E] peer"
+                      required
+                    />
+                    <label
+                      htmlFor="suspenceAmount"
+                      className="peer-focus:font-medium absolute text-lg text-black font-bold duration-300 transform -translate-y-6 scale-75 top-1 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-[#02733E] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                    >
+                      Quantity
+                    </label>
+                    {quantityError && (
+                      <div className="text-red-500 text-xs mt-1">
+                        {quantityError}
                       </div>
                     )}
-                  </>
-                )}
+                  </div>
+                </div>
+                <div className={`gap-2 mb-2 `}>
+                  <div className="relative z-0 w-full mb-5 group">
+                    <input
+                      type="text"
+                      name="reason"
+                      value={entry.reason}
+                      onChange={handleEntryChange}
+                      placeholder=""
+                      className="block py-2.5 px-0 w-full text-sm text-black bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-[#02733E] peer"
+                      required
+                    />
+                    <label
+                      htmlFor="suspenceAmount"
+                      className="peer-focus:font-medium absolute text-lg text-black font-bold duration-300 transform -translate-y-6 scale-75 top-1 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-[#02733E] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+                    >
+                      Reason
+                    </label>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-            
+              {/* Shared Action, Amount, Description fields and table */}
+              {commonFields.paymentCategory === "vehicleMaintenance" && (
+              <div
+                className={`mt-4 my-4 p-2 border border-blue-100 rounded-xl shadow-sm w-full bg-white`}
+              >
+                <h2 className="text-md font-extrabold flex items-center gap-2 text-[#02733E]">
+                  Vehicle Maintenance Info (Spare Part)
+                </h2>
+                <div className="flex justify-between flex-wrap gap-1 ">
+                  {/* Only show vehicle select if vehicleMaintenance */}
+
+                  <div
+                    className="flex-1 flex flex-col max-w-[150px] min-w-[100px]"
+                  >
+                    <label className="text-[#444444] text-sm font-bold ">
+                      Vehicle
+                    </label>
+                    <select
+                      name="vehicleId"
+                      value={vehicleRow.vehicleId}
+                      onChange={handleVehicleRowChange}
+                      className="border border-gray-300 rounded py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
+                    >
+                      <option value="">Select Vehicle</option>
+                      {vehicles.map((vehicle) => (
+                        <option key={vehicle._id} value={vehicle._id}>
+                          {vehicle.plate}
+                          {vehicle.model ? ` - ${vehicle.model}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex-1 flex flex-col max-w-[100px] min-w-[100px]">
+                    <label className="text-[#444444] text-sm font-bold ">
+                      KM
+                    </label>
+                    <input
+                      type="number"
+                      name="km"
+                      value={vehicleRow.km}
+                      onChange={handleVehicleRowChange}
+                      className="border border-gray-300 rounded py-1  text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
+                      placeholder="Killo Meter "
+                    />
+                    
+                  </div>
+                  <div
+                    className="flex-1 flex flex-col max-w-[150px] min-w-[100px]"
+                  >
+                    <label className="text-[#444444] text-sm font-bold ">
+                      Parts Category
+                    </label>
+                    <select
+                      name="vehicleComponentCategory"
+                      value={vehicleRow.vehicleComponentCategory}
+                      onChange={handleVehicleRowChange}
+                      className="border border-gray-300 rounded  py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
+                    >
+                      <option value="">Select Parts Category</option>
+                      {vehicleComponentsCatagory.map((item) => (
+                        <option key={item.key} value={item.key}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div
+                    className="flex-1 flex flex-col max-w-[150px]  min-w-[100px]"
+                  >
+                    <label className="text-[#444444] text-sm font-bold ">
+                      Parts
+                    </label>
+                    <select
+                      name="vehicleComponents"
+                      value={vehicleRow.vehicleComponents}
+                      onChange={handleVehicleRowChange}
+                      className="border border-gray-300 rounded py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
+                    >
+                      <option value="">Select Parts</option>
+                      {filteredVehicleComponents.map((item) => (
+                        <option key={item.key} value={item.key}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex-1 flex flex-col max-w-[120px] min-w-[100px]">
+                    <label className="text-[#444444] text-sm font-bold ">
+                      Action
+                    </label>
+                    <select
+                      name="action"
+                      value={vehicleRow.action}
+                      onChange={handleVehicleRowChange}
+                      className="border border-gray-300 rounded py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
+                    >
+                      <option value="">Select Action</option>
+                      {transactionAction.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex-1 flex flex-col max-w-[100px] min-w-[100px]">
+                    <label className="text-[#444444] text-sm font-bold ">
+                      Quantity
+                    </label>
+                    <input
+                      type="number"
+                      name="qty"
+                      value={vehicleRow.qty}
+                      onChange={handleVehicleRowChange}
+                      className="border border-gray-300 rounded py-1  text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
+                      placeholder="Amount "
+                    />
+       
+                  </div>
+                  <div className="flex-1 flex flex-col max-w-[100px] min-w-[100px]">
+                    <label className="text-[#444444] text-sm font-bold ">
+                      Amount
+                    </label>
+                    <input
+                      type="number"
+                      name="amount"
+                      value={vehicleRow.amount}
+                      onChange={handleVehicleRowChange}
+                      className="border border-gray-300 rounded py-1  text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
+                      placeholder="Amount "
+                    />
+       
+                  </div>
+                  <div className="flex-1 flex flex-col max-w-[200px] min-w-[100px]">
+                    <label className="text-[#444444] text-sm font-bold ">
+                      Description
+                    </label>
+                    <input
+                      type="text"
+                      name="description"
+                      value={vehicleRow.description}
+                      onChange={handleVehicleRowChange}
+                      className="border border-gray-300 rounded py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
+                      placeholder="Description"
+                    />
+                  </div>
+                  <button
+                    className="mt-5 px-4 py-1  text-blue-700 rounded hover:bg-gray-100 transition font-bold border border-blue-700 cursor-pointer"
+                    onClick={handleAddVehicleRow}
+                    type="button"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>)}
+            </div>
+            {/* Table of added rows */}
+            {vehicleRows.length > 0 && (
+              <div className="overflow-x-auto mb-4">
+                <table className="min-w-full border border-gray-200 rounded">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      {commonFields.paymentCategory ===
+                        "vehicleMaintenance" && (
+                        <>
+                          <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
+                            Vehicle
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
+                            KM
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
+                            Parts Category
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
+                            Parts
+                          </th>
+                        </>
+                      )}
+                      
+                      <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
+                        Action
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
+                        Description
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
+                        Quantity
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
+                        Amount
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
+                        Remove
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vehicleRows.map((row, idx) => {
+                      return (
+                        <tr key={idx} className="border-t">
+                          {commonFields.paymentCategory ===
+                            "vehicleMaintenance" && (
+                            <>
+                              <td className="px-4 py-2 text-sm">
+                                {(() => {
+                                  const vehicle = vehicles.find(
+                                    (v) => v._id === row.vehicleId
+                                  );
+                                  return vehicle
+                                    ? `${vehicle.plate}${
+                                        vehicle.model
+                                          ? " - " + vehicle.model
+                                          : ""
+                                      }`
+                                    : "";
+                                })()}
+                              </td>
+                              <td className="px-4 py-2 text-sm">
+                                {row.km}
+                              </td>
+                              <td className="px-4 py-2 text-sm">
+                                {(() => {
+                                  const cat = vehicleComponentsCatagory.find(
+                                    (c) =>
+                                      c.key === row.vehicleComponentCategory
+                                  );
+                                  return cat ? cat.label : "";
+                                })()}
+                              </td>
+                              <td className="px-4 py-2 text-sm">
+                                {(() => {
+                                  const part = vehicleComponents.find(
+                                    (p) => p.key === row.vehicleComponents
+                                  );
+                                  return part ? part.label : "";
+                                })()}
+                              </td>
+                            </>
+                          )}
+                          <td className="px-4 py-2 text-sm">{row.action}</td>
+                          <td className="px-4 py-2 text-sm">
+                            {row.description}
+                          </td>
+                          <td className="px-4 py-2 text-sm">{row.qty}</td>
+                          <td className="px-4 py-2 text-sm">{row.amount}</td>
+                          <td className="px-4 py-2 text-sm">
+                            <button
+                              type="button"
+                              className="text-red-500 hover:text-red-700"
+                              onClick={() => handleRemoveVehicleRow(idx)}
+                              title="Remove"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  {/* Total row */}
+                  <tfoot>
+                    <tr className="bg-blue-100 font-bold">
+                      {/* Adjust colspan based on the number of columns before qty and amount */}
+                      <td colSpan={commonFields.paymentCategory === "vehicleMaintenance" ? 6 : 3} className="px-4 py-2 text-right">Total</td>
+                      <td className="px-4 py-2 text-sm">
+                        {vehicleRows.reduce((sum, row) => sum + Number(row.qty || 0), 0)}
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        {vehicleRows.reduce((sum, row) => sum + Number(row.amount || 0), 0)}
+                      </td>
+                      <td className="px-4 py-2"></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </div>
         </form>
       )}
       {/* Show error message if present */}
-      {formError && (
-        <div className="text-red-600 bg-red-50 border border-red-200 rounded px-4 py-2 mb-2 text-sm">
-          {formError}
-        </div>
-      )}
+      {formError && toast.error(formError)}
     </div>
   );
 }

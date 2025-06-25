@@ -19,6 +19,7 @@ export default async function handler(req, res) {
     try {
       await dbConnect();
       const data = req.body;
+ 
       //  validate required fields here
       const requiredFields = ['vehicleId', 'pumpedAt', 'liters', 'pricePerLiter', 'totalCost', 'recordedBy'];
       for (const field of requiredFields) {

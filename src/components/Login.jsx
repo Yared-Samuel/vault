@@ -54,8 +54,9 @@ const Login = () => {
           id: userData.id
         }));
         console.log(auth)
+        
+        router.push('/dashboard')
         setIsLoading(false); // Stop loading before navigation
-        router.push('/transactions')
         toast.success(data.message);
       } else {
         toast.error(data.message || "Login failed");

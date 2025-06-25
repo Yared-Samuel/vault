@@ -1,4 +1,5 @@
-import { FilePlus } from "lucide-react";
+import { transactionAction, vehicleComponents, vehicleComponentsCatagory } from "@/lib/constants";
+import { FilePlus, Trash2 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 
 export default function PayModal({
@@ -19,8 +20,20 @@ export default function PayModal({
   const [receptReference, setReceptReference] = useState("");
   const [localError, setLocalError] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [vehicleMaintenance, setVehicleMaintenance] = useState([]);
+  const [vehicleMaintenance, setVehicleMaintenance] = useState({
+    vehicleId: "",
+    action: "",
+    vehicleComponentCategory: "",
+    vehicleComponents: "",
+    description: "",
+    amount: "",
+    km: "",
+  });
   const [vehicles, setVehicles] = useState([]);
+  const [fetchedVehicleMaintenance, setFetchedVehicleMaintenance] = useState([]);
+  const [editableVehicleMaintenance, setEditableVehicleMaintenance] = useState([]);
+  const [loadingVM, setLoadingVM] = useState(false);
+
   useEffect(() => {
     setRelatedReceiptUrl(tx?.relatedReceiptUrl || "");
     setRelatedReceiptFile(null);
@@ -56,6 +69,29 @@ export default function PayModal({
     };
     fetchVehicles();
   }, []);
+
+  useEffect(() => {
+    if (tx && tx._id && tx.paymentType === 'vehicleMaintenance') {
+      setLoadingVM(true);
+      fetch(`/api/transactions/${tx._id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && Array.isArray(data.data.vehicleMaintenance)) {
+            setFetchedVehicleMaintenance(data.data.vehicleMaintenance);
+            setEditableVehicleMaintenance(data.data.vehicleMaintenance.map(vm => ({ ...vm })));
+          } else {
+            setFetchedVehicleMaintenance([]);
+            setEditableVehicleMaintenance([]);
+          }
+          setLoadingVM(false);
+        })
+        .catch(() => {
+          setFetchedVehicleMaintenance([]);
+          setEditableVehicleMaintenance([]);
+          setLoadingVM(false);
+        });
+    }
+  }, [tx && tx._id]);
 
   let isPayDisabled = payDisabled || uploading;
   if (tx) {
@@ -99,38 +135,34 @@ export default function PayModal({
   };
 
   // Handler for editing vehicle maintenance fields (row-based)
-  const handleVehicleRowChange = (idx, e) => {
+  const handleVehicleRowChange = (e) => {
     const { name, value } = e.target;
-    setVehicleMaintenance((prev) =>
-      prev.map((item, i) => {
-        if (i !== idx) return item;
-        if (name === "vehicleId") {
-          const selectedVehicle = vehicles.find((v) => v._id === value);
-          return {
-            ...item,
-            vehicleId: selectedVehicle
-              ? {
-                  _id: selectedVehicle._id,
-                  plate: selectedVehicle.plate,
-                  model: selectedVehicle.model,
-                }
-              : {},
-          };
-        }
-        return {
-          ...item,
-          [name]: name === "amount" ? Number(value) : value,
-        };
-      })
-    );
+    setVehicleMaintenance((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleAddVehicleRow = () => {
-    setVehicleMaintenance((prev) => [
-      ...prev,
-      { vehicleId: {}, description: "", amount: "" },
-    ]);
+  const handleAddVehicleRow = (e) => {
+    e.preventDefault();
+    if (tx.paymentType === "vehicleMaintenance") {
+      if (
+        !vehicleMaintenance.vehicleId ||
+        !vehicleMaintenance.description ||
+        !vehicleMaintenance.amount
+      )
+        return;
+    } else {
+      if (!vehicleMaintenance.description || !vehicleMaintenance.amount) return;
+    }
+    setVehicleMaintenance((prev) => [...prev, { ...vehicleMaintenance }]);
+    setVehicleMaintenance({
+      vehicleId: "",
+      action: "",
+      vehicleComponentCategory: "",
+      vehicleComponents: "",
+      description: "",
+      amount: "",
+    });
   };
+
 
   const handleRemoveVehicleRow = (idx) => {
     setVehicleMaintenance((prev) => prev.filter((_, i) => i !== idx));
@@ -177,6 +209,27 @@ export default function PayModal({
     } else {
       onPay({});
     }
+  };
+
+  const filteredVehicleComponents = vehicleMaintenance.vehicleComponentCategory
+    ? vehicleComponents.filter(
+        (item) => item.category === vehicleMaintenance.vehicleComponentCategory
+      )
+    : [];
+
+  const handleEditVMChange = (idx, field, value) => {
+    setEditableVehicleMaintenance(prev => prev.map((row, i) => i === idx ? { ...row, [field]: value } : row));
+  };
+
+  const handleSaveVMRow = async (idx) => {
+    const row = editableVehicleMaintenance[idx];
+    // PATCH request to update the vehicleMaintenance row
+    await fetch(`/api/vehicle-maintenance/${row._id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(row)
+    });
+    // Optionally, refetch or update fetchedVehicleMaintenance
   };
 
   if (!open || !tx) return null;
@@ -300,102 +353,61 @@ export default function PayModal({
         </div>
         </div>
         {/* Vehicle Maintenance Details Section (row-based) */}
-        <div className="mb-4">
-              <label className="block mb-2 font-semibold">Vehicle Maintenance Details</label>
-              {/* Add Row UI */}
-              <div className="flex items-end gap-3 mb-4">
-                <div className="flex flex-col" style={{ minWidth: 180 }}>
-                  <label className="text-[#444444] text-sm font-bold mb-1">Vehicle</label>
-                  <select
-                    name="vehicleId"
-                    value={''}
-                    onChange={e => {
-                      handleAddVehicleRow();
-                      handleVehicleRowChange(vehicleMaintenance.length, e);
-                    }}
-                    className="border border-gray-300 rounded px-2 py-2 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white min-w-[140px] max-w-[200px]"
-                  >
-                    <option value="">Select Vehicle</option>
-                    {vehicles.map((vehicle) => (
-                      <option key={vehicle._id} value={vehicle._id}>
-                        {vehicle.plate}{vehicle.model ? ` - ${vehicle.model}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              {/* Table of added rows */}
-              {vehicleMaintenance.length > 0 && (
+        
+                              
+                {fetchedVehicleMaintenance.length > 0 && (
+                <div className="mb-4">
+              <div className="overflow-x-auto mb-4">
+                <h2 className="text-md font-extrabold flex items-center gap-2 text-[#02733E]">
+                  Vehicle Maintenance Info (Spare Part)
+                </h2>
+                
                 <div className="overflow-x-auto mb-4">
-                  <table className="min-w-full border border-gray-200 rounded">
+                  <table className="min-w-full border border-gray-200 rounded-lg overflow-hidden shadow-sm bg-white">
                     <thead>
-                      <tr className="bg-gray-50">
-                        <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">Vehicle</th>
-                        <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">Description</th>
-                        <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">Amount</th>
-                        <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">Remove</th>
+                      <tr className="bg-blue-50 text-sm">
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Vehicle</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">KM</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Parts Category</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Parts</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Action</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Description</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Quantity</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Amount</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {vehicleMaintenance.map((row, idx) => {
-                        const vehicle = vehicles.find((v) => v._id === row.vehicleId?._id);
-                        return (
-                          <tr key={idx} className="border-t">
-                            <td className="px-4 py-2 text-sm">
-                              <select
-                                name="vehicleId"
-                                value={row.vehicleId?._id || ''}
-                                onChange={e => handleVehicleRowChange(idx, e)}
-                                className="border border-gray-300 rounded px-2 py-1 text-sm bg-white min-w-[120px] max-w-[180px]"
-                              >
-                                <option value="">Select Vehicle</option>
-                                {vehicles.map((vehicle) => (
-                                  <option key={vehicle._id} value={vehicle._id}>
-                                    {vehicle.plate}{vehicle.model ? ` - ${vehicle.model}` : ""}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-                            <td className="px-4 py-2 text-sm">
-                              <input
-                                type="text"
-                                name="description"
-                                value={row.description || ''}
-                                onChange={e => handleVehicleRowChange(idx, e)}
-                                className="border border-gray-300 rounded px-2 py-1 text-sm bg-white min-w-[120px] max-w-[200px]"
-                                placeholder="Description"
-                              />
-                            </td>
-                            <td className="px-4 py-2 text-sm">
-                              <input
-                                type="number"
-                                name="amount"
-                                value={row.amount || ''}
-                                onChange={e => handleVehicleRowChange(idx, e)}
-                                className="border border-gray-300 rounded px-2 py-1 text-sm bg-white min-w-[80px] max-w-[120px]"
-                                placeholder="Amount"
-                              />
-                            </td>
-                            <td className="px-4 py-2 text-sm">
-                              <button
-                                type="button"
-                                className="text-red-500 hover:text-red-700"
-                                onClick={() => handleRemoveVehicleRow(idx)}
-                                title="Remove"
-                              >
-                                &times;
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                    <tbody>                                                                      
+                      {editableVehicleMaintenance.map((row, idx) => (
+                        <tr key={row._id || idx} className={
+                          `transition border-t ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`
+                        }>
+                          <td className="px-4 py-2 text-xs">{row.vehicleId?.plate || '-'}</td>
+                          <td className="px-4 py-2 text-xs">{row.km}</td>
+                          <td className="px-4 py-2 text-xs">{row.vehicleComponentCategory}</td>
+                          <td className="px-4 py-2 text-xs">{row.vehicleComponents}</td>
+                          <td className="px-4 py-2 text-xs">{row.action}</td>
+                          <td className="px-4 py-2 text-xs">{row.description}</td>
+                          <td className="px-4 py-2 text-xs">{row.qty}</td>
+                          <td className="px-4 py-2 text-xs">{row.amount}</td>
+                        </tr>
+                      ))}
+                      {/* Total row */}
+                      <tr className="bg-blue-100 font-bold">
+                        <td colSpan={5} className="px-4 py-2 text-right">Total</td>
+                        <td className="px-4 py-2">
+                          {editableVehicleMaintenance.reduce((sum, row) => sum + Number(row.amount || 0), 0)}
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
-              )}
+              </div>
             </div>
+            )}
+        </div>
+        
         {localError && <div className="text-red-500 mb-2 text-sm">{localError}</div>}
       </div>
-    </div>
+  
   );
 } 

@@ -1,12 +1,16 @@
+import { transactionAction, vehicleComponents, vehicleComponentsCatagory } from '@/lib/constants';
 import mongoose, { Schema } from 'mongoose';
 
 const VehicleTransactionSchema = new Schema({
-    vehicleId: { type: Schema.Types.ObjectId, ref: 'Vehicle', required: true },
-    transactionId: { type: Schema.Types.ObjectId, ref: 'Transaction', required: true },
-    date: { type: Date, required: true },
-    amount: { type: Number },
-    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-
+    transactionId: { type: Schema.Types.ObjectId, ref: 'Transaction' },
+    vehicleId: { type: Schema.Types.ObjectId, ref: 'Vehicle' },
+    km: { type: Number, default: 0 },
+    action: { type: String, enum: transactionAction.map((item) => item.value) },
+    vehicleComponentCategory: { type: String, enum: vehicleComponentsCatagory.map((item) => item.key) },
+    vehicleComponents: { type: String, enum: vehicleComponents.map((item) => item.key) },
+    description: { type: String },
+    amount: { type: Number, required: true },
+    qty: { type: Number, default: 1 },
     
 }, { timestamps: true });
 

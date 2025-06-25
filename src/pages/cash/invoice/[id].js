@@ -104,28 +104,47 @@ export default function InvoicePage() {
         <span className="block text-xs">የጥቃቅን ወጪ መክፈያ ሰነድ</span>
         </div>
       <div className="flex flex-col items-end mb-4">
-        <div className="text-xs font-semibold">Date: <span className="font-normal underline min-w-[100px] inline-block">{transaction.requestedAt ? new Date(transaction.requestedAt).toLocaleDateString() : ''}</span></div>
+        <div className="text-xs font-semibold">Date: <span className="font-normal underline  ">{new Date().toLocaleDateString()}</span></div>
         {transaction.serialNumber && (
-          <div className="text-xs font-semibold">CPV No: <span className="font-mono text-base">{transaction.serialNumber}</span></div>
+          <div className="text-xs font-semibold">PCPV No: <span className="font-mono text-base">{String(transaction.serialNumber).padStart(6, '0')}</span></div>
         )}
       </div>
-      {/* Main Info Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mb-4 text-sm">
-        <div><span className="font-semibold">Paid To:</span> {transaction.to || '-'}</div>
-        <div><span className="font-semibold">Reference No:</span> {transaction.recept_reference || '-'}</div>
-        <div><span className="font-semibold">Reason:</span> {transaction.reason || '-'}</div>
-        <div><span className="font-semibold">Type:</span> {transaction.type === 'receipt_payment' ? 'Cash Payment' : transaction.type === 'suspence_payment' ? 'Suspence Payment' : transaction.type}</div>
-        <div><span className="font-semibold">Vehicle:</span> {transaction.vehicleId?.plate || '-'}</div>
-
-        
-      </div>
+      {/* Main Info Table */}
+      <table className="w-full mb-4 text-sm border border-gray-300">
+        <tbody>
+          <tr>
+            <td className="border border-gray-300 font-semibold w-2/4">Paid To</td>
+            <td className="border border-gray-300 font-normal bg-gray-100">{transaction.to || '-'}</td>
+          </tr>
+          <tr>
+            <td className="border border-gray-300 font-semibold">Reason</td>
+            <td className="border border-gray-300 font-normal bg-gray-100">{transaction.reason || '-'}</td>
+          </tr>
+          <tr>
+            <td className="border border-gray-300 font-semibold">Reference No</td>
+            <td className="border border-gray-300 font-normal bg-gray-100">{transaction.recept_reference || '-'}</td>
+          </tr>
+          <tr>
+            <td className="border border-gray-300 font-semibold">Type</td>
+            <td className="border border-gray-300 font-normal bg-gray-100">{transaction.type === 'receipt_payment' ? 'Cash Payment' : transaction.type === 'suspence_payment' ? 'Suspence Payment' : transaction.type}</td>
+          </tr>
+          <tr>
+            <td className="border border-gray-300 font-semibold">Tranaction</td>
+            <td className="border border-gray-300 font-normal bg-gray-100">{transaction.type === 'receipt_payment' ? 'Cash Payment' : transaction.type === 'suspence_payment' ? 'Suspence Payment' : transaction.type}</td>
+          </tr>
+          <tr>
+            <td className="border border-gray-300 font-semibold">Product Quantity</td>
+            <td className="border border-gray-300 font-normal bg-gray-100">{transaction.quantity || '-'}</td>
+          </tr>
+        </tbody>
+      </table>
       {/* Table for clarity */}
       {transaction.vehicleMaintenance && transaction.vehicleMaintenance.length > 0 ? (
       
        
-        <table className="w-full border text-xs mb-2">
+        <table className="w-full border text-xs mb-2 mt-8">
           <thead>
-            <tr className="bg-gray-100">
+            <tr className="bg-gray-200">
               <th className="border px-2 py-1">Vehicle</th>
               <th className="border px-2 py-1">Description</th>
               <th className="border px-2 py-1">Amount</th>
@@ -135,18 +154,22 @@ export default function InvoicePage() {
             {transaction.vehicleMaintenance.map((item) => (
               <tr key={item._id}>
                 <td className="border px-2 py-1 min-w-[120px]">
-                  {item.vehicleId?.plate}
+                  {item.vehicleId?.plate} - {item.vehicleId?.model}
                 </td>
                 <td className="border px-2 py-1 min-w-[120px]">{item.description}</td>
                 <td className="border px-2 py-1 min-w-[80px] text-right">{item.amount}</td>
               </tr>
             ))}
+            <tr>
+              <td className="border px-2 py-1 font-bold text-right" colSpan={2}>Total</td>
+              <td className="border px-2 py-1 min-w-[80px] text-right font-bold">{formattedAmount}</td>
+            </tr>
           </tbody>
         </table>
       
 
       ) : (
-        <table className="w-full border text-xs mb-2">
+        <table className="w-full border text-xs mb-2 mt-8">
         <thead>
           <tr className="bg-gray-100">
             <th className="border px-2 py-1">Description</th>
@@ -159,6 +182,10 @@ export default function InvoicePage() {
             <td className="border px-2 py-1 min-w-[120px]">{transaction.reason || ''}</td>
             <td className="border px-2 py-1 min-w-[60px] text-center">{transaction.quantity ?? '-'}</td>
             <td className="border px-2 py-1 min-w-[80px] text-right">{formattedAmount}</td>
+          </tr>
+          <tr>
+            <td className="border px-2 py-1 font-bold text-right" colSpan={2}>Total</td>
+            <td className="border px-2 py-1 min-w-[80px] text-right font-bold">{formattedAmount}</td>
           </tr>
         </tbody>
       </table>

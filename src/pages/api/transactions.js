@@ -3,7 +3,7 @@ import Transaction from '@/models/Transaction';
 import Vehicle from '@/models/Vehicle';
 import User from '@/models/User';
 import CheckRequest from '@/models/CheckRequest';
-
+import VehicleTransaction from '@/models/VehicleTransaction';
 export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
         .populate('createdBy', 'name')
         .populate('requestedBy', 'name')
         .populate('approvedBy', 'name')
-        .populate('vehicleMaintenance.vehicleId', 'plate model');
+        // .populate({ path: 'vehicleMaintenance', populate: { path: 'vehicleId', select: 'plate model' } });
       return res.status(200).json({ success: true, data: transactions });
     } catch (error) {
       console.error('Error fetching transactions:', error);
@@ -23,13 +23,13 @@ export default async function handler(req, res) {
   } else if (req.method === 'POST') {
     try {
       await dbConnect();
-      const {status, type, reason, requestedBy, requestedAt,  to, amount, suspenceAmount,quantity, recept_reference, vehicleMaintenance} = req.body;
-      
+      const {status, type, reason, requestedBy, requestedAt,  to, amount, suspenceAmount,quantity, recept_reference, vehicleMaintenance, paymentCategory} = req.body;
+      console.log(req.body)
      if(!status || !type || !requestedBy || !requestedAt ) {
       return res.status(400).json({ success: false, message: 'Missing required fields.' });
      }
 
-     
+    
       const transaction = await Transaction.create({
         status,
         type,
@@ -42,10 +42,22 @@ export default async function handler(req, res) {
         requestedBy,
         requestedAt,
         createdBy: requestedBy,
-        vehicleMaintenance
+        paymentType: paymentCategory,
+        // vehicleMaintenance will be set after VehicleTransaction creation
       })
 
-       await transaction.save();
+      if (Array.isArray(vehicleMaintenance) && vehicleMaintenance.length > 0) {
+        const vehicleTransactions = await Promise.all(vehicleMaintenance.map(vm =>
+          VehicleTransaction.create({
+            ...vm,
+            transactionId: transaction._id
+          })
+        ));
+        // Store the created VehicleTransaction IDs in the transaction
+        transaction.vehicleMaintenance = vehicleTransactions.map(vt => vt._id);
+        await transaction.save();
+      }
+
       return res.status(201).json({ success: true, data: "done" });
     } catch (error) {
       console.error('Error creating transaction:', error);
@@ -64,16 +76,25 @@ export default async function handler(req, res) {
           rejectedReason,
           rejectedAt: new Date()
         };
+
+       
       } else {
         update = { status: 'approved', approvedBy };
       }
+
+      
       const updated = await Transaction.findByIdAndUpdate(
         id,
         update,
-        { new: true }
+        { new: true } // Returns the updated document instead of the original one
       );
       if (!updated) {
         return res.status(404).json({ success: false, message: 'Transaction not found.' });
+      }
+      const transaction = await Transaction.findById(id);
+      if(status === 'rejected' && transaction.paymentType === "vehicleMaintenance" && transaction.vehicleMaintenance.length > 0){
+      
+        await VehicleTransaction.deleteMany({ transactionId: id });
       }
       return res.status(200).json({ success: true, data: updated });
     } catch (error) {

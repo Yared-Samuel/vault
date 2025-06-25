@@ -14,10 +14,16 @@ import {
   Users,
   Circle,
   ChevronsLeftRight,
+  BoomBox,
 } from "lucide-react";
 import Image from "next/image";
 
 const navItems = [
+  {
+    label: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+  },
 
   {
     label: "Payments",
@@ -25,27 +31,28 @@ const navItems = [
     dropdown: [
       { label: "Payment Request", href: "/transactions" , icon: <Circle size={10}/> },
       { label: "Payment Actions", href: "/cash" , icon: <Circle size={10}/> },
+      { label: "Check", href: "/checks" , icon: <CreditCard size={10}/> },
     ],
   },
-  {
-    label: "Check Requests",
-    href: "/checks",
-    icon: CreditCard,
-  },
+
   
   {
-    label: "Vehicles",
+    label: "Dispatch",
     icon: Car,
     dropdown: [
-      { label: "Vehicle List", href: "/vehicles" , icon:  <ChevronsLeftRight size={10}/>},
-      { label: "New Vehicle", href: "/vehicles/new" , icon:  <ChevronsLeftRight size={10}/>},
-      { label: "Fuel Dispense", href: "/fuel-transactions", icon:  <ChevronsLeftRight size={10}/>},
+      { label: "New Dispense", href: "/fuel-transactions/dispense", icon:  <Fuel size={10}/>},
+      { label: "Fuel Dispense", href: "/fuel-transactions", icon:  <Fuel size={10}/>},
+      { label: "Maintenance", href: "/vehicle-transaction", icon:  <Car size={10}/>},
+      { label: "Vehicle List", href: "/vehicles" , icon:  <Car size={10}/>},
     ],
   },
   {
     label: "Reports",
-    href: "/reports",
-    icon: BarChart2,
+    icon: BoomBox,
+    dropdown: [
+      { label: "Payment Report", href: "/reports/paymentReport" , icon: <Circle size={10}/>},
+      { label: "Dispatch Report", href: "/reports/dispatchReport" , icon: <Circle size={10}/>},
+    ],
   },
   {
     label: "Users",
@@ -91,7 +98,7 @@ export default function AppSidebar({ collapsed, setCollapsed, sidebarOpen, setSi
 
   return (
     
-      <div className="pt-13">
+      <div className="top-0">
         {/* Overlay and sidebar for mobile only */}
         <div className={
           `sm:hidden ${sidebarOpen ? '' : 'hidden'}`
@@ -230,7 +237,7 @@ export default function AppSidebar({ collapsed, setCollapsed, sidebarOpen, setSi
                         <button
                           type="button"
                           onClick={() => toggleDropdown(item.label)}
-                          className={`flex items-center w-full p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group ${isActive ? "bg-gray-100 dark:bg-gray-700" : ""}`}
+                          className={`flex items-center w-full p-2 text-gray-900 rounded-lg dark:text-white hover:bg-[#A7C1A8] dark:hover:bg-gray-700 group ${isActive ? "bg-[#A7C1A8] dark:bg-gray-700" : ""}`}
                         >
                           <Icon className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" />
                           <span className="flex-1 ms-3 text-left whitespace-nowrap">{item.label}</span>
@@ -241,7 +248,7 @@ export default function AppSidebar({ collapsed, setCollapsed, sidebarOpen, setSi
                           )}
                         </button>
                         {isOpen && (
-                          <ul className="pl-8 mt-1 space-y-1 text-xs" style={{ background: '#f1f5f9', borderRadius: 6 }}>
+                          <ul className="pl-8 mt-1 space-y-1 text-xs" style={{  borderRadius: 6 }}>
                             {item.dropdown.map((d) => (
                               <li key={d.href}>
                                 <Link

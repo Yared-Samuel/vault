@@ -23,7 +23,7 @@ export default function AppHeader() {
   };
 
   return (
-    <nav className="fixed top-0 z-20 w-full bg-[#eeefe0b4] border-b border-[#A7C1A8] shadow-sm transition-all duration-300">
+    <nav className="top-0 z-20 w-full bg-[#eeefe0b4] border-b border-[#A7C1A8] shadow-sm transition-all duration-300">
       <div className="px-3 py-1.5 lg:px-5 lg:pl-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center justify-start pl-6">

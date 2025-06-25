@@ -14,7 +14,7 @@ export default async function handler(req, res) {
         .populate('approvedBy', 'name')
         .populate('rejectedBy', 'name')
         .populate('cashAccount', 'name')
-        .populate('vehicleMaintenance.vehicleId', 'plate model');
+        .populate({ path: 'vehicleMaintenance', populate: { path: 'vehicleId', select: 'plate model' } });
       if (!transaction) {
         return res.status(404).json({ success: false, message: 'Transaction not found.' });
       }

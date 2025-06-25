@@ -35,7 +35,6 @@ import {
 import { DateRange } from 'react-date-range';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
 
 export default function FuelTransactionsPage() {
   useRedirectLoggedOutUser();
@@ -43,6 +42,7 @@ export default function FuelTransactionsPage() {
   const [sorting, setSorting] = useState([]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [columnFilters, setColumnFilters] = useState([]);
+  const [rowSelection, setRowSelection] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [dateRange, setDateRange] = useState([
     {
@@ -146,6 +146,27 @@ export default function FuelTransactionsPage() {
 
   // Only show plate, liters, km/l, total cost, odometer, date, recordedBy
   const columns = [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <input
+          type="checkbox"
+          checked={table.getIsAllPageRowsSelected()}
+          onChange={table.getToggleAllPageRowsSelectedHandler()}
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          checked={row.getIsSelected()}
+          disabled={!row.getCanSelect()}
+          onChange={row.getToggleSelectedHandler()}
+        />
+      ),
+      enableSorting: false,
+      enableResizing: false,
+      size: 32,
+    },
     {
       header: <span>Plate</span>,
       accessorKey: "vehicleId.plate",
@@ -329,22 +350,41 @@ export default function FuelTransactionsPage() {
   const table = useReactTable({
     data: filteredTransactions,
     columns,
-    state: { sorting, pagination, columnFilters },
+    state: { sorting, pagination, columnFilters, rowSelection },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
     onColumnFiltersChange: setColumnFilters,
+    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     manualPagination: false,
     pageCount: Math.ceil(filteredTransactions.length / pagination.pageSize),
+    enableRowSelection: true,
   });
 
   // Summaries for report
   const totalVehicles = new Set(filteredTransactions.map(tx => tx.vehicleId?._id)).size;
   const totalLiters = filteredTransactions.reduce((sum, tx) => sum + (Number(tx.liters) || 0), 0);
   const totalCost = filteredTransactions.reduce((sum, tx) => sum + (Number(tx.totalCost) || 0), 0);
+
+  // Calculate sums for selected rows
+  const selectedRows = table.getSelectedRowModel().rows;
+  const selectedLiters = selectedRows.reduce((sum, row) => sum + (Number(row.original.liters) || 0), 0);
+  const selectedTotalCost = selectedRows.reduce((sum, row) => sum + (Number(row.original.totalCost) || 0), 0);
+
+  // Prevent background scroll when modal is open
+  useEffect(() => {
+    if (showModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showModal]);
 
   return (
     <div  className="w-full mx-auto mt-2">
@@ -520,6 +560,20 @@ export default function FuelTransactionsPage() {
             </div>
           </div>
         )}
+        {/* Show sums for selected rows (desktop) */}
+        {selectedRows.length > 0 && (
+          <div className="flex gap-6 mt-2 justify-center">
+            <div className="hidden md:block flex items-center justify-center bg-green-600 text-white font-bold" style={{ width: 36, height: 36, borderRadius: '50%' }}>
+              {selectedRows.length}
+            </div>
+            <div className="hidden md:block font-semibold text-green-800 bg-green-50 rounded px-4 py-2">
+              {selectedLiters.toLocaleString(undefined, { maximumFractionDigits: 2 })} Lt
+            </div>
+            <div className="hidden md:block font-semibold text-blue-800 bg-blue-50 rounded px-4 py-2">
+              {selectedTotalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })} ETB
+            </div>
+          </div>
+        )}
 
       </div>
       {showModal && (
@@ -535,6 +589,7 @@ export default function FuelTransactionsPage() {
             alignItems: "center",
             justifyContent: "center",
             zIndex: 1000,
+            overscrollBehavior: "contain",
           }}
           onClick={() => setShowModal(false)}
         >
@@ -545,20 +600,25 @@ export default function FuelTransactionsPage() {
               borderRadius: 8,
               minWidth: 320,
               minHeight: 120,
-              boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
+              boxShadow: "0 2px 16px rgba(0,0,0,0.5)",
               position: "relative",
+              maxHeight: "90vh",
+              overflowY: "hidden",
+              width: "100%",
+              maxWidth: 480,
             }}
             onClick={e => e.stopPropagation()}
           >
             <button
               style={{
                 position: "absolute",
-                top: 8,
-                right: 8,
+                top: 2,
+                right: 15,
                 background: "transparent",
                 border: "none",
-                fontSize: 20,
+                fontSize: 40,
                 cursor: "pointer",
+                color: "#F26B5E",
               }}
               onClick={() => setShowModal(false)}
               aria-label="Close"
@@ -582,9 +642,25 @@ export default function FuelTransactionsPage() {
           .fuel-card-list { display: none !important; }
         }
       `}</style>
+      {/* Show sums for selected rows on mobile */}
       <div className="fuel-card-list" style={{ display: 'none', marginTop: 8 }}>
-        {filteredTransactions.map((tx, idx) => (
-          <div key={tx._id || idx} style={{
+        {selectedRows.length > 0 && (
+          <div className="flex gap-3 mt-2 justify-center md:hidden">
+            <div className="flex items-center justify-center bg-green-600 text-white font-bold" style={{ width: 32, height: 32, borderRadius: '50%' }}>
+              {selectedRows.length}
+            </div>
+            <div className="font-semibold text-green-800 bg-green-50 rounded px-2 py-1">
+              {selectedLiters.toLocaleString(undefined, { maximumFractionDigits: 2 })} Lt
+            </div>
+            <div className="font-semibold text-blue-800 bg-blue-50 rounded px-2 py-1">
+              {selectedTotalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })} ETB
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="fuel-card-list" style={{ display: 'none', marginTop: 8 }}>
+        {table.getRowModel().rows.map((row, idx) => (
+          <div key={row.original._id || idx} style={{
             background: '#fff',
             borderRadius: 16,
             boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
@@ -596,19 +672,26 @@ export default function FuelTransactionsPage() {
             border: '1px solid #e2e8f0',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <input
+                type="checkbox"
+                checked={row.getIsSelected()}
+                disabled={!row.getCanSelect()}
+                onChange={row.getToggleSelectedHandler()}
+                style={{ marginRight: 8 }}
+              />
               <Car style={{ width: 20, height: 20, color: '#3182ce' }} />
-              <span style={{ fontWeight: 700, fontSize: 18 }}>{tx.vehicleId?.plate}</span>
-              <Badge variant="secondary">{formatDateShort(tx.pumpedAt)}</Badge>
+              <span style={{ fontWeight: 700, fontSize: 18 }}>{row.original.vehicleId?.plate}</span>
+              <Badge variant="secondary">{formatDateShort(row.original.pumpedAt)}</Badge>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 2 }}>
-              <Badge variant="secondary"><Droplet style={{ width: 14, height: 14, marginRight: 4 }} /> {formatNumber(tx.liters, 2)} Lt</Badge>
-              <Badge variant="danger" ><Gauge style={{ width: 14, height: 14, marginRight: 4, }} /> {formatNumber(tx.km_lit, 2)} KM/L</Badge>
-              <Badge variant="primary"><DollarSign style={{ width: 14, height: 14, marginRight: 4 }} /> {formatNumber(tx.totalCost, 2)}</Badge>
-              <Badge variant="secondary"><Gauge style={{ width: 14, height: 14, marginRight: 4 }} /> {formatNumber(tx.odometer, 0)} KM</Badge>
+              <Badge variant="secondary"><Droplet style={{ width: 14, height: 14, marginRight: 4 }} /> {formatNumber(row.original.liters, 2)} Lt</Badge>
+              <Badge variant="danger" ><Gauge style={{ width: 14, height: 14, marginRight: 4, }} /> {formatNumber(row.original.km_lit, 2)} KM/L</Badge>
+              <Badge variant="primary"><DollarSign style={{ width: 14, height: 14, marginRight: 4 }} /> {formatNumber(row.original.totalCost, 2)}</Badge>
+              <Badge variant="secondary"><Gauge style={{ width: 14, height: 14, marginRight: 4 }} /> {formatNumber(row.original.odometer, 0)} KM</Badge>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
               <User style={{ width: 14, height: 14, marginRight: 2, color: '#4a5568' }} />
-              <span style={{ fontSize: 14, color: '#4a5568' }}>{tx.recordedBy?.name}</span>
+              <span style={{ fontSize: 14, color: '#4a5568' }}>{row.original.recordedBy?.name}</span>
             </div>
           </div>
         ))}

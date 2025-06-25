@@ -1,31 +1,36 @@
 import {
+  paymentTypesModel,
   transactionStatusesModel,
   transactionTypesModel,
 } from "@/lib/constants";
 import mongoose, { Schema } from "mongoose";
 
 const TransactionSchema = new Schema(
-  
   {
+    paymentType: {
+      type: String,
+      enum: paymentTypesModel.map((item) => item.value),
+      required: true,
+    },
+
     status: {
       type: String,
       enum: transactionStatusesModel,
       required: true,
     },
-   
+
     type: {
       type: String,
       enum: transactionTypesModel,
       required: true,
-    },    
+    },
     amount: { type: Number, default: 0 },
-    to: { type: String  },
+    to: { type: String },
     reason: { type: String },
     requestedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     requestedAt: { type: Date, default: Date.now },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     relatedReceiptUrl: String,
-
 
     // For Check_Payment only
     checkRequestId: {
@@ -41,15 +46,12 @@ const TransactionSchema = new Schema(
     date: { type: Date, default: Date.now },
     approvedBy: { type: Schema.Types.ObjectId, ref: "User" },
 
-
-
-     // For paid status only
-     cashAccount: {
+    // For paid status only
+    cashAccount: {
       type: Schema.Types.ObjectId,
       ref: "CashAccount",
     },
-    recept_reference: { type: String }, // For Receipt_Payment and Suspense_Payment also check_payment
-
+    recept_reference: { type: String , default: false}, // For Receipt_Payment and Suspense_Payment also check_payment
 
     // For rejection
     // status will be rejected here
@@ -57,20 +59,23 @@ const TransactionSchema = new Schema(
     rejectedAt: { type: Date },
     rejectedReason: { type: String },
 
-    
     // when status is paid
-    serialNumber: { type: Number, unique: true, sparse: true },
-    quantity: { type: Number , default: 1},
+    serialNumber: { type: Number},
+    quantity: { type: Number, default: 1 },
 
     // For transporter only
     vehicleMaintenance: [
       {
-        vehicleId: { type: Schema.Types.ObjectId, ref: "Vehicle" },
-        description: { type: String },
-        amount: { type: Number },
+        type: Schema.Types.ObjectId,
+        ref: "VehicleTransaction"
       }
-    ]
+    ],
 
+    // For vehicleMaintenance only
+    vehicleTransaction: {
+      type: Schema.Types.ObjectId,
+      ref: "VehicleTransaction",
+    },
   },
   { timestamps: true }
 );

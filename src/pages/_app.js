@@ -1,4 +1,6 @@
 import "@/styles/globals.css";
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
 import { AuthProvider } from "@/pages/context/AuthProvider";
 import Sidebar from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner"
@@ -10,18 +12,18 @@ import Image from "next/image";
 export default function App({ Component, pageProps }) {
   const router = useRouter();
   const isLoginPage = router.pathname === "/";
-  // Detect invoice page (dynamic route)
   const isInvoicePage = router.pathname.startsWith("/cash/invoice");
   const isPrintPage =
     router.pathname === '/checks/print' ||
     router.pathname === '/cash/invoice/print' ||
     router.pathname === '/cash/suspenceInvoice/[id]' ||
-    router.pathname === '/fuel-transactions/report';
+    router.pathname === '/fuel-transactions/report' ||
+    router.pathname === '/reports/paymentReport/print';
   const [collapsed, setCollapsed] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <AuthProvider>
+    <AuthProvider> 
       {isLoginPage ? (
         <Component {...pageProps} />
       ) : isInvoicePage ? (
@@ -56,7 +58,7 @@ export default function App({ Component, pageProps }) {
               <Image src="/open-side.svg" alt="expand" width={20} height={20} />
             </button>
           )}
-          <main className="flex pt-12 px-2 w-full h-screen overflow-y-auto">
+          <main className="flex  px-2 w-full h-screen overflow-y-auto">
             <Toaster position="top-right" richColors size="lg" />
             <Component {...pageProps} />
           </main>

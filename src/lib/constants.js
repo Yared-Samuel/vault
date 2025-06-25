@@ -5,6 +5,7 @@ export const checkTypes = [
   { value: "purchase", label: "Payment/Purchase" },
   { value: "petty_cash", label: "Petty Cash" },
   { value: "fuel", label: "Fuel" },
+  { value: "BGI", label: "BGI" },
   { value: "general", label: "General" },
   { value: "other", label: "Other" },
 ];
@@ -31,6 +32,21 @@ export const transactionStatusesModel = ["requested", "approved", "suspence", "p
 
 
 export const userRoles = ["admin", "accountant", "cashier", "purchaser", "owner", "transporter","employee"]
+
+export const paymentTypesModel = [
+  { value: "vehicleMaintenance", label: "SparePart and Maintenance" },
+  { value: "medical", label: "Medical"},
+  { value: "perdiem", label: "Perdiem" },
+  { value: "general", label: "General Expence" },
+]
+
+export const transactionAction = [
+  { value: "purchase", label: "Purchase" },
+  { value: "maintenance", label: "Maintenance" },
+  { value: "service", label: "Service" },
+  { value: "other", label: "Other" }, // For other expense
+  
+]
 
 
 // Vehicles constatnt
@@ -60,6 +76,10 @@ export const vehicleComponents = [
   { key: "clutch", label: "Clutch / ክላች", category: "MechanicalParts" },
   { key: "fuel_system", label: "Fuel System / ነዳጅ ስስተም", category: "MechanicalParts" },
   { key: "exhaust_system", label: "Exhaust System / ኤጅዖስት ስስተም", category: "MechanicalParts" },
+  { key: "steering_system", label: "Steering System / ስቲዪሪንግ ስስተም", category: "MechanicalParts" },
+  { key: "differential", label: "Differential / ዴፊሪንስል", category: "MechanicalParts" },
+
+  
 
   // Electrical Parts
   { key: "battery", label: "Battery / ባትሪ", category: "ElectricalParts" },
@@ -100,5 +120,4 @@ export const vehicleComponents = [
   { key: "tires_wheels", label: "Tires & Wheels / ጎማና መንኰራኵር", category: "OtherParts" },
   { key: "others", label: "Others / ሌሎች", category: "OtherParts" },
 ];
-
 

@@ -1,23 +1,18 @@
 import mongoose, { Schema } from "mongoose";
+import { checkTypes } from "@/lib/constants";
 
 const CheckRequestSchema = new Schema(
   {
-    requestedBy: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      // required: true,
-    },
-    approvedBy: { type: Schema.Types.ObjectId, ref: "User" },
+
     type: {
       type: String,
-      enum: ["purchase", "petty_cash", "fuel", "general"],
+      enum: checkTypes.map(type => type.value),
       required: true,
     },
-    amount: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["pending", "approved",  "paid", "rejected"],
-      default: "pending",
+      enum: [ "prepared",  "paid", "rejected"],
+      default: "prepared",
     },
     checkNumber: { type: String, required: true , unique: true},
     bank: {
@@ -25,12 +20,8 @@ const CheckRequestSchema = new Schema(
       enum: ["awash", "dashin", "cbe", "united"],
       required: true,
     },
-    to: { type: String, required: true },
-    reason: { type: String, required: true },
-    issuedAt: Date,
     paidAt: Date,
     notes: String,
-    dedicatedFuelAccount: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

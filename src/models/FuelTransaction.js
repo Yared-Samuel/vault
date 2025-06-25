@@ -7,9 +7,10 @@ const FuelTransactionSchema = new Schema({
   liters: { type: Number, required: true },
   km_lit: { type: Number },
   pricePerLiter: { type: Number, required: true },
-  totalCost: { type: Number, required: true },
-  station: String,
+  totalCost: { type: Number },
+  type: {type: String, enum: ["fuel", "other"], default: "fuel"},
   recordedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  station: { type: String, enum: ["A", "B", "C"], default: "A"},
 }, { timestamps: true });
 
 export default mongoose.models.FuelTransaction || mongoose.model('FuelTransaction', FuelTransactionSchema); 

@@ -55,22 +55,7 @@ const TransactionTable = ({
 
   // Define columns for TanStack Table
   const columns = React.useMemo(() => [
-    {
-      id: 'expander',
-      header: '',
-      size: 32,
-      cell: ({ row }) =>
-        row.original.vehicleMaintenance && row.original.vehicleMaintenance.length > 0 ? (
-          <button
-            className="text-blue-600 hover:text-blue-900 focus:outline-none"
-            onClick={() => row.toggleExpanded()}
-            aria-label={row.getIsExpanded() ? 'Collapse' : 'Expand'}
-          >
-            {row.getIsExpanded() ? <ListX /> : <ListPlus />}
-          </button>
-        ) : null,
-      enableSorting: false,
-    },
+    
     {
       header: 'To',
       accessorKey: 'to',
@@ -159,7 +144,7 @@ const TransactionTable = ({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => { setSelectedTransaction(tx); setShowDetailModal(true); }}>
+              <DropdownMenuItem onClick={() => { window.open(`/transactions/${tx._id}`, '_blank'); }}>
                 <Eye className="w-4 h-4 mr-2" /> View Detail
               </DropdownMenuItem>
               {tx.status !== 'approved' && (
@@ -383,23 +368,7 @@ const TransactionTable = ({
             </svg>
           </div>
         </div>
-        {cashAccounts.length > 0 && (
-          <div className="flex flex-wrap gap-2 md:ml-4">
-            {cashAccounts.map(account => (
-              <span
-                key={account._id}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-green-100 via-lime-100 to-emerald-100 text-[#02733E] px-4 py-2 rounded-full font-semibold shadow-md transition-transform duration-200 hover:scale-105 hover:shadow-lg border border-green-200"
-              >
-                {/* Wallet Icon */}
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#02733E" className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75A2.25 2.25 0 014.5 4.5h15a2.25 2.25 0 012.25 2.25v12a2.25 2.25 0 01-2.25 2.25h-15A2.25 2.25 0 012.25 18.75v-12zM19.5 8.25h-15m0 0V18.75m0-10.5V4.5" />
-                </svg>
-                <span className="font-bold text-green-900">{account.name}</span>
-                <span className="text-green-700 font-medium">&mdash; Balance: <span className="font-bold">${Number(account.balance).toLocaleString()}</span></span>
-              </span>
-            ))}
-          </div>
-        )}
+
         {/* Search input */}
         <div className="flex items-center gap-2 flex-shrink-0 ml-auto mt-2 md:mt-0">
           <input
@@ -464,54 +433,7 @@ const TransactionTable = ({
                     </td>
                   ))}
                 </tr>
-                {row.getIsExpanded() && (
-                  <tr>
-                    <td colSpan={row.getVisibleCells().length} className="bg-white px-10">
-                      
-                      {Array.isArray(row.original.vehicleMaintenance) && row.original.vehicleMaintenance.length > 0 ? (
-                        <div className="w-full overflow-x-auto">
-                          <table className="w-full text-sm border border-gray-200 bg-white font-[Roboto,Arial,sans-serif]">
-                            <thead className="bg-gray-100">
-                              <tr>
-                                <th className="px-2 py-1 border border-gray-400 text-left">Plate</th>
-                                <th className="px-2 py-1 border border-gray-400 text-left">Model</th>
-                                <th className="px-2 py-1 border border-gray-400 text-left">Description</th>
-                                <th className="px-2 py-1 border border-gray-400 text-left">Amount</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {row.original.vehicleMaintenance.map((vm, idx) => (
-                                <tr key={vm._id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                  <td className="px-2 py-1 border-r border-b border-gray-300">{vm.vehicleId?.plate || '-'}</td>
-                                  <td className="px-2 py-1 border-r border-b border-gray-300">{vm.vehicleId?.model || '-'}</td>
-                                  <td className="px-2 py-1 border-r border-b border-gray-300">{vm.description || '-'}</td>
-                                  <td className="px-2 py-1 border-r border-b border-gray-300">{formatCurrency(vm.amount)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <span className="text-gray-500">No vehicle maintenance records.</span>
-                      )}
-
-                      {/* Custom expanded content for the row */}
-                      <div className="mx-2 px-2 rounded-lg   flex flex-wrap gap-5 items-center ">
-                        <div className="w-full mb-2 text-sm font-bold text-gray-700 flex items-center gap-2">
-                          <span className="inline-block w-1.5 h-4 bg-primary rounded-full mr-2"></span>
-                          {row.original.reason} 
-                          <span className="inline-block w-1.5 h-4 bg-primary rounded-full mr-2"></span>
-                          Quantity: {row.original.quantity}
-                          <span className="inline-block w-1.5 h-4 bg-primary rounded-full mr-2"></span>
-                          Suspence: {row.original.suspenceAmount}
-                          <span className="inline-block w-1.5 h-4 bg-primary rounded-full mr-2"></span>
-                          Return: {row.original.returnAmount}
-                        </div>
-                        
-                      </div>
-                    </td>
-                  </tr>
-                )}
+                
               </React.Fragment>
             ))}
                 </tbody>
@@ -575,15 +497,7 @@ const TransactionTable = ({
             {table.getRowModel().rows.map(row => (
               <div key={row.id} className="bg-white rounded-lg shadow-sm border border-blue-100 p-4 flex flex-col gap-2">
                 {/* Expand button for mobile */}
-                {row.original.vehicleMaintenance && row.original.vehicleMaintenance.length > 0 && (
-                  <button
-                    className="self-end text-blue-600 hover:text-blue-900 focus:outline-none mb-2"
-                    onClick={() => row.toggleExpanded()}
-                    aria-label={row.getIsExpanded() ? 'Collapse' : 'Expand'}
-                  >
-                    {row.getIsExpanded() ? '▼ Hide Details' : '▶ Show Details'}
-                  </button>
-                )}
+
                 {row.getVisibleCells().map(cell => (
                   <div key={cell.id} className="flex flex-col mb-2">
                     <span className="text-xs font-semibold text-gray-500 mb-1">
@@ -592,41 +506,7 @@ const TransactionTable = ({
                     <div>{flexRender(cell.column.columnDef.cell, cell.getContext())}</div>
                   </div>
                 ))}
-                {/* Expanded vehicleMaintenance for mobile */}
-                {row.getIsExpanded() && row.original.vehicleMaintenance && row.original.vehicleMaintenance.length > 0 && (
-                  <div className="mt-2 bg-blue-50 rounded-lg p-2">
-                    <div className="font-semibold text-blue-900 mb-1">Vehicle Maintenance</div>
-                    <table className="min-w-[300px] w-full text-xs border border-blue-100 rounded-lg">
-                      <thead>
-                        <tr className="bg-blue-100 text-blue-900">
-                          <th className="px-2 py-1 text-left">Vehicle ID</th>
-                          <th className="px-2 py-1 text-left">Description</th>
-                          <th className="px-2 py-1 text-left">Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {row.original.vehicleMaintenance.map(vm => (
-                          <tr key={vm._id} className="border-b last:border-b-0">
-                            <td className="px-2 py-1 font-mono text-blue-800">
-                              {vm.vehicleId && typeof vm.vehicleId === 'object' ? (
-                                <>
-                                  <span>{vm.vehicleId.plate}</span>
-                                  {vm.vehicleId.model && (
-                                    <span className="text-xs text-gray-500 ml-1">({vm.vehicleId.model})</span>
-                                  )}
-                                </>
-                              ) : (
-                                vm.vehicleId
-                              )}
-                            </td>
-                            <td className="px-2 py-1">{vm.description}</td>
-                            <td className="px-2 py-1 text-green-700 font-semibold">{formatCurrency ? formatCurrency(vm.amount) : vm.amount}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                
               </div>
             ))}
             {/* Pagination controls for mobile */}
