@@ -19,6 +19,7 @@ import {
   import { rankItem } from "@tanstack/match-sorter-utils";
 import { Eye, FilePlus, Printer } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { toast, Toaster } from 'sonner';
 
 const PaymentReport = () => {
     const [filters, setFilters] = useState({
@@ -28,6 +29,7 @@ const PaymentReport = () => {
         startDate: '',
         endDate: '',
         serialNumber: '',
+        isPiticash: true,
     });
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -36,6 +38,7 @@ const PaymentReport = () => {
     const [columnVisibility, setColumnVisibility] = useState({});
     const [columnSizing, setColumnSizing] = useState({});
     const [rowSelection, setRowSelection] = useState({});
+    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 15 });
 
     function formatCurrency(amount) {
         if (typeof amount !== "number") return "-";
@@ -65,6 +68,15 @@ const PaymentReport = () => {
     const fetchReport = async () => {
         setLoading(true);
         setError(null);
+        if(filters.startDate && !filters.endDate){
+            toast.warning("Please select end date");
+            setLoading(false);
+            return;
+        }else if(!filters.startDate && filters.endDate){
+            toast.warning("Please select start date");
+            setLoading(false);
+            return;
+        }
         try {
             const queryParams = new URLSearchParams(filters).toString();
             const response = await fetch(`/api/report/paymentReport?${queryParams}`);
@@ -187,11 +199,13 @@ const PaymentReport = () => {
               columnVisibility,
               columnSizing,
               rowSelection,
+              pagination,
             },
             onSortingChange: setSorting,
             onColumnVisibilityChange: setColumnVisibility,
             onColumnSizingChange: setColumnSizing,
             onRowSelectionChange: setRowSelection,
+            onPaginationChange: setPagination,
             getCoreRowModel: getCoreRowModel(),
             getSortedRowModel: getSortedRowModel(),
             getFilteredRowModel: getFilteredRowModel(),
@@ -214,10 +228,13 @@ const PaymentReport = () => {
 
     return (
         <div className="w-full">
-            
-                    <div className="flex flex-wrap gap-4 mb-4">
+            <h3 className='test-lg ml-6 mt-4 font-bold'>Payment Report</h3>
+                    <div className="flex flex-col sm:flex-row gap-4 m-4 justify-between  outline-1 outline-gray-300 rounded-md p-4">
+                      <div className='flex flex-wrap gap-4'>
+
+                      
                         <div className=''>
-                            <label className="font-semibold text-foreground mr-1 block mb-1">Payment Type</label>
+                            <label className="text-xs font-semibold text-foreground mr-1 block mb-1">Payment Type</label>
                             <select
                                 onChange={(e) => handleFilterChange('paymentType', e.target.value)}
                                 value={filters.paymentType}
@@ -230,7 +247,7 @@ const PaymentReport = () => {
                             </select>
                         </div>
                         <div>
-                            <label htmlFor="status" className="font-semibold text-foreground mr-1 block mb-1">Status</label>
+                            <label htmlFor="status" className="text-xs font-semibold text-foreground mr-1 block mb-1">Status</label>
                             <select
                                 id="status"
                                 onChange={(e) => handleFilterChange('status', e.target.value)}
@@ -244,7 +261,7 @@ const PaymentReport = () => {
                             </select>
                         </div>
                         <div>
-                            <label htmlFor="type" className="font-semibold text-foreground mr-1 block mb-1">Type</label>
+                            <label htmlFor="type" className="text-xs font-semibold text-foreground mr-1 block mb-1">Type</label>
                             <select
                                 id="type"
                                 onChange={(e) => handleFilterChange('type', e.target.value)}
@@ -258,7 +275,7 @@ const PaymentReport = () => {
                             </select>
                         </div>
                         <div>
-                            <label htmlFor="startDate" className="font-semibold text-foreground mr-1 block mb-1">Start Date</label>
+                            <label htmlFor="startDate" className="text-xs font-semibold text-foreground mr-1 block mb-1">Start Date</label>
                             <Input
                                 type="date"
                                 id="startDate"
@@ -269,7 +286,7 @@ const PaymentReport = () => {
                             />
                         </div>
                         <div>
-                            <label htmlFor="endDate" className="font-semibold text-foreground mr-1 block mb-1">End Date</label>
+                            <label htmlFor="endDate" className="text-xs font-semibold text-foreground mr-1 block mb-1">End Date</label>
                             <Input
                                 type="date"
                                 id="endDate"
@@ -279,7 +296,7 @@ const PaymentReport = () => {
                             />
                         </div>
                         <div>
-                            <label htmlFor="serialNumber" className="font-semibold text-foreground mr-1 block mb-1">CPV No (From)</label>
+                            <label htmlFor="serialNumber" className="text-xs font-semibold text-foreground mr-1 block mb-1">CPV No (From)</label>
                             <Input
                                 type="text"
                                 id="serialNumber"
@@ -288,8 +305,8 @@ const PaymentReport = () => {
                                 className="rounded-md border border-border bg-muted text-muted-foreground px-2 py-1.5 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm font-semibold transition-all duration-150 max-w-[100px]"
                             />
                         </div>
-                    </div>
-                    <div className='flex '>  
+                        </div>
+                    <div className='flex items-end mt-4'>  
 
                     
                     <div className='flex gap-4 mb-4'>
@@ -332,6 +349,7 @@ const PaymentReport = () => {
                     </Button>
 
 
+                    </div>
                     </div>
                     </div>
                 
@@ -468,7 +486,7 @@ const PaymentReport = () => {
           onChange={(e) => table.setPageSize(Number(e.target.value))}
           className="border border-border bg-background rounded-md px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ml-2"
         >
-          {[10, 20, 30, 40, 50].map((pageSize) => (
+          {[15, 20, 30, 40, 50].map((pageSize) => (
             <option key={pageSize} value={pageSize}>
               Show {pageSize}
             </option>

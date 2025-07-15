@@ -11,6 +11,7 @@ const VehicleTransactionSchema = new Schema({
     description: { type: String },
     amount: { type: Number, required: true },
     qty: { type: Number, default: 1 },
+    status: { type: String, enum: ['requested', 'in-progress', 'completed', 'cancelled'], default: 'requested' },
     
 }, { timestamps: true });
 

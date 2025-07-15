@@ -113,25 +113,19 @@ const PaymentReportPrint = () => {
                                 <td className="p-2 border border-gray-300">{tx.reason || '-'}</td>
                                 <td className="p-2 border border-gray-300">{tx.serialNumber || '-'}</td>
                                 <td className="p-2 border border-gray-300">{formatDate(tx.requestedAt)}</td>
-                                <td className="p-2 border border-gray-300">{tx.recept_reference || '-'}</td>
+                                <td className="p-2 border border-gray-300 break-all whitespace-pre-line">{tx.recept_reference || '-'}</td>
                                 <td className="p-2 border border-gray-300 text-right font-bold">{formatCurrency(tx.amount || tx.suspenceAmount)}</td>
                                 
                             </tr>
                         ))}
                     </tbody>
-                    <tfoot>
-                        <tr className="bg-gray-100 font-semibold text-gray-800">
-                            <td colSpan="5" className="p-2 border border-gray-300 text-right">
-                                Grand Total
-                            </td>
-                            <td className="p-2 border border-gray-300 text-right font-bold">
-                                {formatCurrency(totalAmount)}
-                            </td>
-                           
-                            
-                        </tr>
-                    </tfoot>
                 </table>
+                        <div className="w-full p-2 border border-gray-300 text-right font-bold flex justify-between">
+                            <div>Grand Total</div>
+                            <div className="p-2 border  text-right font-bold">
+                                 {formatCurrency(totalAmount)}
+                            </div>
+                        </div>
             </main>
 
             <footer className="mt-12 pt-6 border-t border-gray-300 flex justify-between gap-8">
@@ -141,12 +135,12 @@ const PaymentReportPrint = () => {
                     <div className="text-gray-500 text-sm">Name & Signature</div>
                 </div>
                 <div className="flex-1 text-center">
-                    <div className="font-semibold mb-12">Approved By</div>
+                    <div className="font-semibold mb-12">Checked By</div>
                     <div className="border-b border-gray-400 mb-2"></div>
                     <div className="text-gray-500 text-sm">Name & Signature</div>
                 </div>
                 <div className="flex-1 text-center">
-                    <div className="font-semibold mb-12">Audited By</div>
+                    <div className="font-semibold mb-12">Approved By</div>
                     <div className="border-b border-gray-400 mb-2"></div>
                     <div className="text-gray-500 text-sm">Name & Signature</div>
                 </div>

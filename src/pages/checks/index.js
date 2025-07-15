@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { banks, checkTypes } from "@/lib/constants";
 import { toWords } from "number-to-words";
 import { useRouter } from "next/router";
@@ -20,7 +20,7 @@ import {
   getExpandedRowModel,
 } from "@tanstack/react-table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Ellipsis, Eye, NotebookPen, Printer } from "lucide-react";
+import { Ellipsis, Eye, NotebookPen, Printer, SquareCheck, X, Check } from "lucide-react";
 
 function formatCurrency(amount) {
   if (typeof amount !== "number") return "-";
@@ -83,8 +83,8 @@ export default function ChecksPage() {
     
   const [selectedCashAccount, setSelectedCashAccount] = useState('');
   const [cashAccounts, setCashAccounts] = useState([]);
-
-
+  const [editingRowId, setEditingRowId] = useState(null);
+  const [editValues, setEditValues] = useState({});
 
   useEffect(() => {
     async function fetchChecks() {
@@ -106,23 +106,9 @@ export default function ChecksPage() {
     fetchChecks();
   }, []);
 
-  const updateCheck = async (checkId, data) => {
-    try {
-      const res = await fetch(`/api/checkTransaction/checkPrepare/${checkId}`, {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
-      if (res.ok) {
-        toast.success("Check updated successfully");
-      } else {
-        toast.error("Failed to update check");
-      }
-    } catch (err) {
-      toast.error("Failed to update check");
-    }
-  }
 
-  const columns = [
+
+  const columns = useMemo(() => [
     {
       header: "To",
       accessorKey: "to",        
@@ -180,21 +166,29 @@ export default function ChecksPage() {
     {
       header: "Reference",
       accessorKey: "recept_reference",
-
-      cell: (info) => (
-        <div>
+      cell: (info) => {
+        if (editingRowId === info.row.original._id) {
+          return (
+            <input
+              className="border-green-600 border-2 rounded px-1 py-0.5 w-full"
+              value={editValues.recept_reference || ""}
+              onChange={e => setEditValues(v => ({ ...v, recept_reference: e.target.value }))}
+            />
+          );
+        }
+        return (
           <div>{info.row.original.recept_reference ?? ""}</div>
-        </div>
-      ),
+        );
+      },
       enableResizing: true,
     },
     {
       header: "CPV",
-      accessorKey: "serialNumber",
+      accessorKey: "checkSerialNumber",
 
       cell: (info) => (
         <div>
-          <div>{info.row.original.serialNumber ?? ""}</div>
+          <div>{String(info.row.original.checkSerialNumber).padStart(6,'0') ?? ""}</div>
         </div>
       ),
       enableResizing: true,
@@ -211,78 +205,118 @@ export default function ChecksPage() {
       header: "Status",
       accessorKey: "status",
       cell: (info) => (
-        <span
-          className={` text-xs font-semibold ${
-            info.row.original.status === "paid"
-              ? "bg-green-100 text-green-700"
-              : info.row.original.status === "rejected"
-              ? "bg-rose-100 text-rose-600"
-              : "bg-yellow-100 text-yellow-700"
-          }`}
-        >
-          {info.row.original.status}
-        </span>
+        
+          <span>
+            {info.row.original.checkRequestId ? info.row.original.checkRequestId.status : info.row.original.status}
+          </span>
       ),
       enableResizing: true,
     },
     {
       header: "Actions",
       accessorKey: "actions",
-
-      cell: (info) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+      cell: (info) => {
+        const isEditing = editingRowId === info.row.original._id;
+        return isEditing ? (
+          <div className="flex gap-2">
             <button
-              className="p-1 rounded hover:bg-muted transition cursor-pointer"
-              title="Actions"
-            >
-              <Ellipsis />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem
-              onClick={() => {
-                window.open(
-                  `/transactions/${info.row.original._id}`,
-                  "_blank"
-                );
+              className="p-1 rounded bg-green-500 text-white hover:bg-green-600"
+              onClick={async () => {
+                try {
+                  const res = await fetch(`/api/checkTransaction/checkPrepare/${info.row.original._id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ recept_reference: editValues.recept_reference }),
+                  });
+                  const data = await res.json();
+                  if (res.ok && data.success) {
+                    toast.success("Transaction Paid Successfully.");
+                    setChecks(checks => checks.map(c => c._id === info.row.original._id ? { ...c, recept_reference: editValues.recept_reference, status: "paid" } : c));
+                    setEditingRowId(null);
+                  } else {
+                    toast.error(data.message || "Failed to update.");
+                  }
+                } catch (err) {
+                  toast.error("Failed to update.");
+                }
               }}
             >
-              <Eye className="w-4 h-4 mr-2" /> View Detail
-            </DropdownMenuItem>
-            
-              <DropdownMenuItem
-                onClick={() =>
-                  window.open(
-                    `/cash/invoice/${info.row.original._id}`,
-                    "_blank"
-                  )
-                }
+              <Check className="w-4 h-4" />
+            </button>
+            <button
+              className="p-1 rounded bg-red-500 text-white hover:bg-red-600"
+              onClick={() => setEditingRowId(null)}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="p-1 rounded hover:bg-muted transition cursor-pointer"
+                title="Actions"
               >
-                <Printer className="w-4 h-4 mr-2" /> Print Invoice
-              </DropdownMenuItem>
-           
-           
-              <>
+                <Ellipsis />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              { info.row.original.checkRequestId?.status == "prepared" && (
+                <DropdownMenuItem
+                  onClick={() => {
+                    setEditingRowId(info.row.original._id);
+                    setEditValues({
+                      recept_reference: info.row.original.recept_reference,
+                    });
+                  }}
+                >
+                  <SquareCheck enableBackground={true} color="green" className="w-4 h-4 mr-2 " /> <span className="text-green-600 font-semibold"> Pay</span>
+                </DropdownMenuItem>
+              )}
+            
                 
-                {!info.row.original.checkRequestId && info.row.original.type == "check_payment" && (
+                { info.row.original.type == "check_payment" && (
                     <DropdownMenuItem
                         onClick={() => router.push(`/checks/${info.row.original._id}`)}
                     >
-                      <NotebookPen  className="w-4 h-4 mr-2" /> Prepare
+                      <NotebookPen  className="w-4 h-4 mr-2" /> {info.row.original.checkRequestId?.status == "prepared" ? "Edit" : "Prepare"}
                     </DropdownMenuItem>
                   )}
                 
                 
                
-              </>
-            
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+              <DropdownMenuItem
+                onClick={() => {
+                  window.open(
+                    `/transactions/${info.row.original._id}`,
+                    "_blank"
+                  );
+                }}
+              >
+                <Eye className="w-4 h-4 mr-2" /> View Detail
+              </DropdownMenuItem>
+              
+                <DropdownMenuItem
+                  onClick={() =>
+                    window.open(
+                      `/checks/invoice/${info.row.original._id}`,
+                      "_blank"
+                    )
+                  }
+                >
+                  <Printer className="w-4 h-4 mr-2" /> Print Invoice
+                </DropdownMenuItem>
+             
+             
+       
+              
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
       enableResizing: false,
     },
-  ]
+  ], [editingRowId, editValues]);
 
   const table = useReactTable({
     data: checks,
@@ -307,10 +341,10 @@ export default function ChecksPage() {
     getFacetedUniqueValues: getFacetedUniqueValues(),
     getFacetedMinMaxValues: getFacetedMinMaxValues(),
     getExpandedRowModel: getExpandedRowModel(),
-
     enableRowSelection: true,
     enableColumnResizing: true,
     getRowCanExpand: () => true,
+    getRowId: row => row._id,
   });
 
   useEffect(() => {
@@ -392,7 +426,7 @@ export default function ChecksPage() {
         </thead>
         <tbody>
           {table.getRowModel().rows.map((row) => (
-            <React.Fragment key={row.id}>
+            <React.Fragment key={row.original._id}>
               <tr
                 className={
                   `border border-border transition ` +

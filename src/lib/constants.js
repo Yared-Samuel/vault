@@ -3,8 +3,15 @@
 
 export const checkTypes = [
   { value: "purchase", label: "Payment/Purchase" },
+  { value: "vehicleMaintenance", label: "SparePart and Maintenance" },
+  { value: "medical", label: "Medical" },
+  { value: "perdiem", label: "Perdiem" },
+  { value: "rent", label: "Rent" },
+  { value: "officeAccessory", label: "Office Accessory" },
+  { value: "safetyGear", label: "Safety Gear" },
   { value: "petty_cash", label: "Petty Cash" },
   { value: "fuel", label: "Fuel" },
+  { value: "pitiCashReplanish", label: "Piti Cash Replanish" },
   { value: "BGI", label: "BGI" },
   { value: "general", label: "General" },
   { value: "other", label: "Other" },
@@ -24,7 +31,12 @@ export const transactionTypes = [
   { value: "check_payment", label: "Check Payment" },
 ];
 
-export const transactionTypesModel = ["receipt_payment",  "suspence_payment", "check_payment"]
+export const transactionTypesModel = ["receipt_payment",  "suspence_payment", "check_payment", "bank_transfer"]
+export const transactionTypesModelValues = [
+  {value: "receipt_payment", label: "Receipt Payment"}  , 
+  { value: "suspence_payment", label: "Suspence Payment"}, 
+  { value: "check_payment", label: "Check Payment"}, 
+  { value: "bank_transfer", label: "Bank Transfer"}]
 
 
 export const transactionStatusesModel = ["requested", "approved", "suspence", "paid", "rejected"]
@@ -37,6 +49,11 @@ export const paymentTypesModel = [
   { value: "vehicleMaintenance", label: "SparePart and Maintenance" },
   { value: "medical", label: "Medical"},
   { value: "perdiem", label: "Perdiem" },
+  { value: "rent", label: "Rent" },
+  { value: "officeAccessory", label: "Office Accessory" },
+  { value: "safetyGear", label: "Safety Gear" },
+  { value: "bgi", label: "BGI" },
+  { value: "fuel", label: "Fuel" },
   { value: "general", label: "General Expence" },
 ]
 

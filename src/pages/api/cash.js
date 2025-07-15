@@ -63,9 +63,7 @@ export default async function handler(req, res) {
       console.log("one");
       if (!transaction.serialNumber) {
         let counterDoc = await Counter.findOne();
-        if (!counterDoc) {
-          counterDoc = await Counter.create({ cpv: 0, pcpv: 0 });
-        }
+        
         let serialNumber;
         if (type === 'check_payment') {
           counterDoc.cpv += 1;

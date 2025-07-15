@@ -32,6 +32,7 @@ const navItems = [
       { label: "Payment Request", href: "/transactions" , icon: <Circle size={10}/> },
       { label: "Payment Actions", href: "/cash" , icon: <Circle size={10}/> },
       { label: "Check", href: "/checks" , icon: <CreditCard size={10}/> },
+      { label: "Direct Check Issue", href: "/checks/new" , icon: <CreditCard size={10}/> },
     ],
   },
 
@@ -40,10 +41,11 @@ const navItems = [
     label: "Dispatch",
     icon: Car,
     dropdown: [
-      { label: "New Dispense", href: "/fuel-transactions/dispense", icon:  <Fuel size={10}/>},
+      { label: "Maintenance", href: "/maintenans-managment/maintenance", icon:  <Fuel size={10}/>},
       { label: "Fuel Dispense", href: "/fuel-transactions", icon:  <Fuel size={10}/>},
       { label: "Maintenance", href: "/vehicle-transaction", icon:  <Car size={10}/>},
       { label: "Vehicle List", href: "/vehicles" , icon:  <Car size={10}/>},
+      { label: "New Dispense", href: "/fuel-transactions/dispense", icon:  <Fuel size={10}/>},
     ],
   },
   {
@@ -127,7 +129,7 @@ export default function AppSidebar({ collapsed, setCollapsed, sidebarOpen, setSi
             >
               <Image src="/close-side.svg" alt="expand"  width={20} height={20} />
             </button>
-            <div className="h-full px-3 pb-8 overflow-y-auto bg-[#EEEFE0] flex flex-col justify-between ">
+            <div className="h-full px-3 pb-8 overflow-y-auto bg-[#EEEFE0] flex flex-col justify-around ">
               
               <ul className="space-y-2 font-small text-sm">
                 
@@ -195,7 +197,7 @@ export default function AppSidebar({ collapsed, setCollapsed, sidebarOpen, setSi
                 })}
               </ul>
               {/* Logout button at the bottom */}
-              <div className="mt-4">
+              <div className="">
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded transition-colors duration-150 font-semibold"

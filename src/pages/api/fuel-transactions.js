@@ -19,9 +19,9 @@ export default async function handler(req, res) {
     try {
       await dbConnect();
       const data = req.body;
- 
+     
       //  validate required fields here
-      const requiredFields = ['vehicleId', 'pumpedAt', 'liters', 'pricePerLiter', 'totalCost', 'recordedBy'];
+      const requiredFields = ['vehicleId', 'pumpedAt', 'liters', 'pricePerLiter', 'totalCost', 'recordedBy', 'station'];
       for (const field of requiredFields) {
         if (!data[field]) {
           return res.status(400).json({ success: false, message: `Missing required field: ${field}` });

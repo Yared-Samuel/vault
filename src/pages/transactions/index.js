@@ -20,7 +20,7 @@ export default function TransactionsPage() {
   useRedirectLoggedOutUser();
   
   const { auth } = useContext(AuthContext);
-  console.log(auth);
+  console.log(auth)
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
     transactionSource: 'cashAccount',
@@ -41,7 +41,6 @@ export default function TransactionsPage() {
     createdBy: auth?.id || '',
     quantity: '',
   });
-  const [checkRequests, setCheckRequests] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -51,25 +50,9 @@ export default function TransactionsPage() {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [users, setUsers] = useState([]);
-  const [vehicles, setVehicles] = useState([]);
 
-  useEffect(() => {
-    const fetchCheckRequests = async () => {
-      try {
-        const res = await fetch('/api/checks');
-        const data = await res.json();
-        if (data.success) {
-          const filtered = data.data.filter(
-            (cr) => cr.status === 'paid' && cr.type === 'purchase'
-          );
-          setCheckRequests(filtered);
-        }
-      } catch (err) {
-        console.error('Failed to fetch check requests', err);
-      }
-    };
-    fetchCheckRequests();
-  }, []);
+
+
 
   useEffect(() => {
     const fetchCashAccounts = async () => {
@@ -119,20 +102,7 @@ export default function TransactionsPage() {
     fetchUsers();
   }, []);
 
-  useEffect(() => {
-    const fetchVehicles = async () => {
-      try {
-        const res = await fetch('/api/vehicles');
-        const data = await res.json();
-        if (data.success) {
-          setVehicles(data.data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch vehicles', err);
-      }
-    };
-    fetchVehicles();
-  }, []);
+
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target;

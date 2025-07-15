@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   } else if (req.method === 'POST') {
     try {
       await dbConnect();
-      const {status, type, reason, requestedBy, requestedAt,  to, amount, suspenceAmount,quantity, recept_reference, vehicleMaintenance, paymentCategory} = req.body;
+      const {status, type, reason, requestedBy, requestedAt,  to, amount, suspenceAmount,quantity, recept_reference, vehicleMaintenance, paymentType} = req.body;
       console.log(req.body)
      if(!status || !type || !requestedBy || !requestedAt ) {
       return res.status(400).json({ success: false, message: 'Missing required fields.' });
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
         requestedBy,
         requestedAt,
         createdBy: requestedBy,
-        paymentType: paymentCategory,
+        paymentType,
         // vehicleMaintenance will be set after VehicleTransaction creation
       })
 

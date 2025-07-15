@@ -233,13 +233,15 @@ export default function DashboardPage() {
     const [error, setError] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [maintenanceReport, setMaintenanceReport] = useState([]);
+    const [filteredTransactions, setFilteredTransactions] = useState([]);
     const fetchReport = async () => {
         setLoading(true);
         setError(null);
         try {
             const filters = {
                 startDate: dateRange[0].startDate?.toISOString().split('T')[0],
-                endDate: dateRange[0].endDate?.toISOString().split('T')[0]
+                endDate: dateRange[0].endDate?.toISOString().split('T')[0],
+
             }
             const queryParams = new URLSearchParams(filters).toString();
             const response = await fetch(`/api/report/paymentReport?${queryParams}`);
@@ -285,8 +287,14 @@ export default function DashboardPage() {
         // eslint-disable-next-line
     }, [dateRange]);
 
-    const stats = getDashboardStats(transactions);
-    const recentTransactions = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+    // Filter out transactions where paymentType is "bgi"
+    useEffect(() => {
+        const filtered = transactions.filter(tx => tx.paymentType !== 'bgi');
+        setFilteredTransactions(filtered);
+    }, [transactions]);
+
+    const stats = getDashboardStats(filteredTransactions);
+    const recentTransactions = [...filteredTransactions].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
 
     return (
         <div className="w-full min-h-screen pt-4">
@@ -395,9 +403,9 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="bg-[#f1f1e9] rounded-lg shadow w-full flex flex-col items-center">
                         <h2 className="text-lg font-semibold ">Payments by Type</h2>
-                        {transactions.length > 0 ? (
+                        {filteredTransactions.length > 0 ? (
                             <div className="w-full max-w-[400px] h-[300px] mx-auto">
-                                <Pie data={getPieChartData(transactions)} options={pieOptions} />
+                                <Pie data={getPieChartData(filteredTransactions)} options={pieOptions} />
                             </div>
                         ) : (
                             <p>No data for selected range.</p>

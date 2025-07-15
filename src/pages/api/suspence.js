@@ -6,6 +6,7 @@ export default async function handler(req, res) {
   if (req.method === "PATCH") {
     const { transactionId, cashAccountId, amount, reason } = req.body;
     console.log(req.body);
+    console.log("Suspance payment")
     try {
       await dbConnect();
       const transaction = await Transaction.findById(transactionId);
@@ -23,10 +24,13 @@ export default async function handler(req, res) {
         status: "suspence"
       }
 
+      console.log(update)
+
       const cashAccount = await CashAccount.findById(cashAccountId);
-      if (!cashAccount || cashAccount.balance < amount) {
-        return res.status(404).json({ success: false, message: "Cash account not found or balance is not enough" });
-      }
+      console.log(cashAccount)
+      // if (!cashAccount || cashAccount.balance < amount) {
+      //   return res.status(404).json({ success: false, message: "Cash account not found or balance is not enough" });
+      // }
 
       cashAccount.balance -= amount;
       await cashAccount.save();
@@ -42,7 +46,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, message: "Transaction updated successfully", data: updated });
       
       
-      
+      console.log("Transaction updated successfully")
       
     } catch (error) {
       console.error("Error updating transaction:", error);

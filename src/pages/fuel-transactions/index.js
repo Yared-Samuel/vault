@@ -46,8 +46,8 @@ export default function FuelTransactionsPage() {
   const [showModal, setShowModal] = useState(false);
   const [dateRange, setDateRange] = useState([
     {
-      startDate: null,
-      endDate: null,
+      startDate: new Date().setHours(0,0,0,0),
+      endDate: new Date().setHours(23,59,59,999),
       key: 'selection',
     },
   ]);
@@ -496,7 +496,7 @@ export default function FuelTransactionsPage() {
           >
             <Calendar style={{ width: 18, height: 18 }} />
             <span className="hidden md:block">{dateRange[0].startDate && dateRange[0].endDate
-              ? `${dateRange[0].startDate.toLocaleDateString()} - ${dateRange[0].endDate.toLocaleDateString()}`
+              ? `${formatDateShort(dateRange[0].startDate)} - ${formatDateShort(dateRange[0].endDate)}`
               : 'Select date range'}</span>
           </button>
           {(dateRange[0].startDate || dateRange[0].endDate) && (
@@ -548,21 +548,27 @@ export default function FuelTransactionsPage() {
 
         {/* Show sums only when a date range is selected */}
         {(dateRange[0].startDate && dateRange[0].endDate) && (
-          <div className="flex gap-6 mt-2 justify-center">
-            <div className="font-semibold text-gray-800 bg-gray-100 rounded px-2 py-2">
-              {filteredTransactions.length} Vehicle{filteredTransactions.length !== 1 ? 's' : ''}
-            </div>
-            <div className="font-semibold text-green-800 bg-green-50 rounded px-4 py-2">
-              {filteredTransactions.reduce((sum, tx) => sum + (Number(tx.liters) || 0), 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} Lt
-            </div>
-            <div className="font-semibold text-blue-800 bg-blue-50 rounded px-4 py-2">
-              {filteredTransactions.reduce((sum, tx) => sum + (Number(tx.totalCost) || 0), 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ETB
-            </div>
+          <div className="flex flex-row gap-2 mt-2 justify-center items-center w-full max-w-2xl mx-auto py-1">
+            {/* Vehicles Badge */}
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-200 text-gray-800 text-xs font-bold border border-gray-300">
+              <svg className="text-gray-500" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="8" height="3" rx="1.5"/><path d="M5 7V5a2 2 0 0 1 4 0v2"/><circle cx="5.5" cy="12" r="1"/><circle cx="10.5" cy="12" r="1"/></svg>
+              {filteredTransactions.length} <span className="ml-0.5 font-normal">Vehicle{filteredTransactions.length !== 1 ? 's' : ''}</span>
+            </span>
+            {/* Liters Badge */}
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-xs font-bold border border-green-300">
+              <svg className="text-green-600" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 1v5"/><rect x="4" y="6" width="6" height="5" rx="2.5"/><path d="M9 10v1"/></svg>
+              {filteredTransactions.reduce((sum, tx) => sum + (Number(tx.liters) || 0), 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="ml-0.5 font-normal">Lt</span>
+            </span>
+            {/* ETB Badge */}
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs font-bold border border-blue-300">
+              <svg className="text-blue-600" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 1v12"/><path d="M3 8h8"/><path d="M5 11h6"/><path d="M5 5h6"/></svg>
+              {filteredTransactions.reduce((sum, tx) => sum + (Number(tx.totalCost) || 0), 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="ml-0.5 font-normal">ETB</span>
+            </span>
           </div>
         )}
-        {/* Show sums for selected rows (desktop) */}
+        {/* Show sums for selected rows (desktop) */} 
         {selectedRows.length > 0 && (
-          <div className="flex gap-6 mt-2 justify-center">
+          <div className="flex gap-6 mt-2 justify-center sticky top-0 z-30 bg-white/95 shadow-sm">
             <div className="hidden md:block flex items-center justify-center bg-green-600 text-white font-bold" style={{ width: 36, height: 36, borderRadius: '50%' }}>
               {selectedRows.length}
             </div>
@@ -588,7 +594,6 @@ export default function FuelTransactionsPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 1000,
             overscrollBehavior: "contain",
           }}
           onClick={() => setShowModal(false)}
@@ -689,9 +694,26 @@ export default function FuelTransactionsPage() {
               <Badge variant="primary"><DollarSign style={{ width: 14, height: 14, marginRight: 4 }} /> {formatNumber(row.original.totalCost, 2)}</Badge>
               <Badge variant="secondary"><Gauge style={{ width: 14, height: 14, marginRight: 4 }} /> {formatNumber(row.original.odometer, 0)} KM</Badge>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
-              <User style={{ width: 14, height: 14, marginRight: 2, color: '#4a5568' }} />
-              <span style={{ fontSize: 14, color: '#4a5568' }}>{row.original.recordedBy?.name}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 2 }}>
+              <div className="flex items-center gap-2">
+                <User style={{ width: 14, height: 14, marginRight: 2, color: '#4a5568' }} />
+                <span style={{ fontSize: 14, color: '#4a5568' }}>{row.original.recordedBy?.name}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={
+                    `inline-flex items-center justify-center rounded-full font-extrabold shadow-md ring-2 ring-white transition-transform duration-200
+                    px-3 py-1 text-base sm:text-lg md:text-xl
+                    ${row.original.station === 'A' ? 'bg-gradient-to-r from-green-500 to-green-700' :
+                      row.original.station === 'B' ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900' :
+                      'bg-gradient-to-r from-blue-500 to-blue-700'}
+                    hover:scale-105`
+                  }
+                  style={{ letterSpacing: 2, minWidth: 40, minHeight: 40 }}
+                >
+                  {row.original.station}
+                </span>
+              </div>
             </div>
           </div>
         ))}

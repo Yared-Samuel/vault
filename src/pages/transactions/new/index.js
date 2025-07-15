@@ -2,10 +2,7 @@ import { useState, useEffect, useContext } from "react";
 import { useRouter } from "next/router";
 import AuthContext from "../../context/AuthProvider";
 import { Button } from "@/components/ui/button";
-import {
-  Trash2,
-  FilePlus,
-} from "lucide-react";
+import { Trash2, FilePlus } from "lucide-react";
 import {
   paymentTypesModel,
   vehicleComponentsCatagory,
@@ -13,49 +10,121 @@ import {
   vehicleComponents,
 } from "@/lib/constants";
 import { toast } from "sonner";
+import SelectInputFloating from "@/components/ui/selectInput-floating";
+import InputFloating from "@/components/ui/input-floatin";
+import CheckBox from "@/components/ui/checkBox";
+import LoadingComponent from "@/components/LoadingComponent";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Ellipsis, NotebookPen, Printer, SquareCheck } from "lucide-react";
+import { Cross, Eye, Plus, Minus, X, Check } from "lucide-react";
+import DateInputFloating from "@/components/ui/dateInput-floating";
+
+function formatDate(dateString) {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  return date
+    .toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "2-digit",
+    })
+    .replace(/\./g, ""); // Remove dot from short month if present
+}
 export default function NewTransactionRequestPage() {
   const { auth } = useContext(AuthContext);
   const router = useRouter();
-  const [form, setForm] = useState({
-    transactionSource: "cashAccount",
-    paymentCategory: "",
-    status: "",
-    cashAccount: "",
-    checkRequestId: "",
-    type: "",
-    suspenceAmount: "",
-    returnAmount: "",
-    date: "",
-    pitiCash: false,
-    amount: "",
-    to: "",
-    reason: "",
-    approvedBy: "",
-    requestedBy: auth?.id || "",
-    createdBy: auth?.id || "",
-    quantity: "",
-    recept_reference: "",
-  });
   const [users, setUsers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
-  const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState("");
+  const [vehicleRows, setVehicleRows] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [editingRowId, setEditingRowId] = useState(null);
+  const [editValues, setEditValues] = useState({});
+  const [params, setParams] = useState({
+    startDate: new Date(),
+    endDate: new Date(),
+    paymentType: "",
+    type: "",
+  });
+  const [payload, setPayload] = useState({
+    paymentType: "",
+    status: "requested",
+    type: "",
+    amount: "",
+    suspenceAmount: "",
+    to: "",
+    reason: "",
+    requestedBy: auth?.id || "",
+    quantity: "",
+    recept_reference: "",
+    requestedAt: new Date(),
+    createdBy: auth?.id || "",
+  });
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch("/api/users/users");
+      const data = await res.json();
+      if (data.success) {
+        setUsers(data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch users", err);
+    }
+  };
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await fetch("/api/users/users");
-        const data = await res.json();
-        if (data.success) {
-          setUsers(data.data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch users", err);
-      }
-    };
-    fetchUsers();
-  }, []);
+    const date = payload.requestedAt
+      ? new Date(payload.requestedAt)
+      : new Date();
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+    setParams((prev) => ({
+      ...prev,
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      paymentType: payload.paymentType,
+      type: payload.type,
+    }));
+  }, [payload]);
+
+  console.log(params);
+
+  const handleFilter = async () => {
+    setLoading(true);
+    try {
+      const queryParams = new URLSearchParams(params).toString();
+      const responce = await fetch(`/api/report/paymentReport?${queryParams}`);
+      const data = await responce.json();
+      setTransactions(data.data);
+    } catch (error) {
+      console.error("Failed to fetch transactions", error.message);
+      toast.warning("Failed to fetch Payments", {
+        closeButton: true,
+        autoClose: 4000,
+        hideProgressBar: false,
+        position: "top-center",
+        pauseOnHover: true,
+        draggable: true,
+        style: {
+          background: "#fff",
+          color: "orange",
+          borderRadius: "10px",
+          padding: "10px",
+          fontSize: "14px",
+        },
+      });
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
     const fetchVehicles = async () => {
@@ -67,198 +136,172 @@ export default function NewTransactionRequestPage() {
         }
       } catch (err) {
         console.error("Failed to fetch vehicles", err);
+        toast.warning("Failed to fetch vehicles", {
+          closeButton: true,
+          autoClose: 4000,
+          hideProgressBar: false,
+          position: "top-center",
+          pauseOnHover: true,
+          draggable: true,
+          style: {
+            background: "#fff",
+            color: "orange",
+            borderRadius: "10px",
+            padding: "10px",
+            fontSize: "14px",
+          },
+        });
       }
     };
     fetchVehicles();
   }, []);
 
-  function handleChange(e) {
-    const { name, value, type, checked } = e.target;
-    let newForm = {
-      ...form,
-      [name]: type === "checkbox" ? checked : value,
-    };
-    // Status logic
-    if (name === "transactionSource") {
-      if (value === "cashAccount") {
-        newForm.status = newForm.type === "suspence" ? "suspence" : "requested";
-        newForm.checkRequestId = "";
-      } else if (value === "checkRequestId") {
-        newForm.status = "paid";
-        newForm.cashAccount = "";
-      }
-    }
-    if (name === "type") {
-      if (value === "suspence") {
-        newForm.status = "suspence";
-      } else if (form.transactionSource === "cashAccount") {
-        newForm.status = "requested";
-      }
-    }
-    setForm(newForm);
-  }
-
   async function handleSubmit(entries, e) {
-    e.preventDefault && e.preventDefault();
-    setFormError("");
-    setError(null);
-    if (submitting) return;
-    setSubmitting(true);
-    let allSuccess = true;
-    let lastError = null;
-    try {
-      // Validate required fields for each entry
-      for (const formEntry of entries) {
-        if (!formEntry.requestedBy || !formEntry.type || !formEntry.reason) {
-          setFormError("Please fill all required fields.");
-          allSuccess = false;
-          break;
-        }
-        // Add more validation as needed
-      }
-      if (!allSuccess) return;
-      for (const formEntry of entries) {
-        let payload = {
-          status: formEntry.status || "requested",
-          type: formEntry.type,
-          reason: formEntry.reason,
-          requestedBy: formEntry.requestedBy,
-          requestedAt: formEntry.requestedAt,
-          createdBy: auth?.id,
-          paymentCategory: formEntry.paymentCategory,
-        };
-        const selectedUser = users.find((u) => u._id === formEntry.requestedBy);
-        const isTransporter = selectedUser?.role === "transporter";
-        payload.vehicleId = formEntry.vehicleId;
-        if (vehicleRows.length > 0) {
-          payload.vehicleMaintenance = vehicleRows;
-        } else if (
-          vehicleRow.vehicleId &&
-          vehicleRow.description &&
-          vehicleRow.amount
-        ) {
-          payload.vehicleMaintenance = [vehicleRow];
-        }
-        if (formEntry.type === "receipt_payment") {
-          payload.amount = formEntry.amount;
-          payload.to = formEntry.to;
-          payload.quantity = Number(formEntry.quantity);
-          payload.recept_reference = formEntry.recept_reference;
-        } else if (formEntry.type === "suspence_payment") {
-          payload.suspenceAmount = formEntry.suspenceAmount;
-          payload.quantity = Number(formEntry.quantity);
-          payload.vehicleMaintenance = vehicleRows;
-        }
-        // TODO: handle file upload for relatedReceiptFile if needed
-        try {
-          const res = await fetch("/api/transactions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          });
-          const data = await res.json();
-          if (!data.success) {
-            allSuccess = false;
-            lastError = data.message || "Failed to create transaction.";
-            setFormError(lastError);
-          }
-        } catch (err) {
-          allSuccess = false;
-          lastError = "Failed to create transaction.";
-          setFormError(lastError);
-        }
-      }
-      if (allSuccess) {
-        setForm({
-          transactionSource: "cashAccount",
-          status: "requested",
-          cashAccount: "",
-          checkRequestId: "",
-          type: "",
-          suspenceAmount: "",
-          returnAmount: "",
-          date: "",
-          pitiCash: false,
-          amount: "",
-          to: "",
-          reason: "",
-          relatedReceiptUrl: "",
-          approvedBy: "",
-          requestedBy: auth?.id || "",
-          createdBy: auth?.id || "",
-          quantity: "",
-          recept_reference: "",
-        });
-        // Optionally redirect or show a success message
-        setFormError("");
-        router.push("/transactions");
-      }
-    } finally {
-      setSubmitting(false);
+    // validate payload
+    if (
+      !payload.paymentType ||
+      !payload.type ||
+      !payload.amount ||
+      !payload.reason ||
+      !payload.requestedBy ||
+      !payload.requestedAt
+    ) {
+      toast.error("Missing required fields");
+      return;
     }
-  }
 
-  function handleClose() {
-    router.push("/transactions");
-  }
+    if (
+      payload.type == "receipt_payment" &&
+      !payload.to &&
+      !payload.recept_reference
+    ) {
+      toast.warning("Please fill the paid to and recept reference field", {
+        closeButton: true,
+        autoClose: 4000,
+        hideProgressBar: false,
+        position: "top-center",
+        pauseOnHover: true,
+        draggable: true,
+        style: {
+          background: "#fff",
+          color: "orange",
+          borderRadius: "10px",
+          padding: "10px",
+          fontSize: "14px",
+        },
+      });
+      return;
+    }
 
-  // --- Begin inlined TransactionRequestform ---
-  const defaultEntry = {
+    if (
+      (payload.type == "receipt_payment" || payload.type == "check_payment") &&
+      payload.paymentType == "vehicleMaintenance"
+    ) {
+      const amountSum = vehicleRows.reduce(
+        (sum, row) => sum + Number(row.amount || 0),
+        0
+      );
+      const amount = Number(payload.amount);
+      if (amountSum !== amount) {
+        toast.warning(
+          "While the total amount of the vehicle maintenance is " +
+            amountSum +
+            " the total amount of the receipt or check is " +
+            amount,
+          {
+            closeButton: true,
+            autoClose: 5000,
+            progressBar: true,
+            position: "top-right",
+            pauseOnHover: true,
+            draggable: true,
+            animation: "slide 1s ease-in-out",
+
+            style: {
+              background: "#fff",
+              color: "#D9A404",
+              borderRadius: "10px",
+              padding: "5px",
+              fontSize: "14px",
+              width: "500px",
+            },
+          }
+        );
+        return;
+      }
+    }
+
+    if (
+      payload.paymentType === "vehicleMaintenance" &&
+      vehicleRows.length === 0
+    ) {
+      toast.error("Please add at least one vehicle maintenance");
+      return;
+    }
+
+    try {
+      let submitPayload = { ...payload, vehicleMaintenance: vehicleRows };
+      if (payload.type === "suspence_payment") {
+        submitPayload = {
+          ...submitPayload,
+          suspenceAmount: payload.amount,
+        };
+        delete submitPayload.amount;
+      } else {
+        submitPayload = {
+          ...submitPayload,
+          amount: payload.amount,
+        };
+        delete submitPayload.suspenceAmount;
+      }
+      const res = await fetch("/api/transactions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(submitPayload),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Payment request submitted successfully");
+      } else {
+        toast.error("Failed to submit payment request");
+      }
+      setPayload({
+        paymentType: "",
+    status: "requested",
+    type: "",
     amount: "",
-    quantity: "",
-    recept_reference: "",
+    suspenceAmount: "",
     to: "",
     reason: "",
-    suspenceAmount: "",
-    vehicleId: "",
-  };
-  // Common fields
-  const [commonFields, setCommonFields] = useState({
-    requestedBy: form.requestedBy || "",
-    requestedAt: form.requestedAt || new Date().toISOString().split("T")[0],
-    paymentCategory: "",
-  });
-  // Single entry
-  const [entry, setEntry] = useState({ ...defaultEntry });
-  const [paymentType, setPaymentType] = useState("");
-  const [vehicleError, setVehicleError] = useState("");
-  const [quantityError, setQuantityError] = useState("");
-
-  const selectedUser = users.find((u) => u._id === commonFields.requestedBy);
-  const isTransporter = selectedUser?.role === "transporter";
-
-  const handlePaymentTypeChange = (type) => {
-    setPaymentType(type);
-    setEntry({ ...defaultEntry });
-  };
+    requestedBy: auth?.id || "",
+    quantity: "",
+    recept_reference: "",
+    requestedAt: new Date(),
+    createdBy: auth?.id || "",
+      });
+      setVehicleRows([]);
+      if (!data.success) {
+        allSuccess = false;
+      }
+    } catch (err) {
+      allSuccess = false;
+    }
+  }
 
   const handleCommonChange = (e) => {
     const { name, value } = e.target;
-    setCommonFields((prev) => ({ ...prev, [name]: value }));
+    setPayload((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleEntryChange = (e) => {
     const { name, value, type, files } = e.target;
-    setEntry((prev) => ({
+    setPayload((prev) => ({
       ...prev,
       [name]: type === "file" ? files[0] : value,
     }));
   };
-
-  const resetForm = () => {
-    setCommonFields({
-      requestedBy: "",
-      requestedAt: new Date().toISOString().split("T")[0],
-      paymentCategory: "",
-    });
-    setEntry({ ...defaultEntry });
-    setPaymentType("");
-    setVehicleError("");
-    setQuantityError("");
-  };
-  // --- End inlined TransactionRequestform ---
 
   // --- Begin vehicle-description-amount add section ---
   const [vehicleRow, setVehicleRow] = useState({
@@ -271,7 +314,6 @@ export default function NewTransactionRequestPage() {
     km: "",
     qty: 1,
   });
-  const [vehicleRows, setVehicleRows] = useState([]);
 
   const handleVehicleRowChange = (e) => {
     const { name, value } = e.target;
@@ -280,7 +322,7 @@ export default function NewTransactionRequestPage() {
 
   const handleAddVehicleRow = (e) => {
     e.preventDefault();
-    if (commonFields.paymentCategory === "vehicleMaintenance") {
+    if (payload.paymentType === "vehicleMaintenance") {
       if (
         !vehicleRow.vehicleId ||
         !vehicleRow.description ||
@@ -329,574 +371,750 @@ export default function NewTransactionRequestPage() {
       km: "",
       qty: 1,
     });
-  }, [commonFields.paymentCategory]);
+  }, [payload.paymentType]);
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between">
-        <h2 className="text-md font-extrabold flex items-center gap-2 text-[#02733E]">
-          <FilePlus className="text-blue-500" size={20} />
-          Payment Request
+    <div className="w-screen bg-white flex flex-col p-4 gap-1">
+      <div className="flex justify-between items-center">
+        <h2 className="text-sm font-extrabold text-black   tracking-wide drop-shadow ">
+          Payment Request Form
         </h2>
-        {/* Payment Type Selection */}
-        <div className="flex gap-8 justify-center">
-          <label
-            className={`flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer border transition-all ${
-              paymentType === "receipt_payment"
-                ? "bg-blue-100 border-blue-400 text-[#02733E] font-light shadow"
-                : "bg-gray-50 border-gray-200 hover:bg-blue-50"
-            }`}
-            title="Request for a receipt payment"
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="submit"
+            className="flex items-center gap-1 bg-white text-black font-bold px-1 py-1 rounded-lg transition border border-gray-300 cursor-pointer hover:bg-[#EEEFE0] disabled:opacity-60"
+            disabled={submitting}
+            onClick={handleFilter}
           >
-            <input
-              type="radio"
-              name="paymentType"
-              value="receipt_payment"
-              checked={paymentType === "receipt_payment"}
-              onChange={() => handlePaymentTypeChange("receipt_payment")}
-              className="accent-blue-500"
-            />
-            Receipt Payment
-          </label>
-          <label
-            className={`flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer border transition-all ${
-              paymentType === "suspence_payment"
-                ? "bg-blue-100 border-blue-400 text-[#02733E] font-light shadow"
-                : "bg-gray-50 border-gray-200 hover:bg-blue-50"
-            }`}
-            title="Request for a suspence payment"
+            <FilePlus size={20} /> {submitting ? "Filtering..." : "Filter"}
+          </button>
+          <button
+            type="submit"
+            className="flex items-center gap-1 bg-white text-black font-bold px-1 py-1 rounded-lg transition border border-gray-300 cursor-pointer hover:bg-[#EEEFE0] disabled:opacity-60"
+            disabled={submitting}
+            onClick={handleSubmit}
           >
-            <input
-              type="radio"
-              name="paymentType"
-              value="suspence_payment"
-              checked={paymentType === "suspence_payment"}
-              onChange={() => handlePaymentTypeChange("suspence_payment")}
-              className="accent-blue-500"
-            />
-            Suspence Payment
-          </label>
+            <FilePlus size={20} /> {submitting ? "Saving..." : "Save"}
+          </button>
         </div>
       </div>
-      {/* Only show the form after a payment type is selected */}
-      {paymentType && (
-        <form
-          onSubmit={(e) => {
-            let hasError = false;
+      <hr className="border-[#D9A404] border-1" />
+      <div className="w-full  flex sm:flex-col md:flex-row gap-2">
+        <div className="flex-col gap-3">
+          <CheckBox
+            label="Receipt"
+            description=""
+            name="type"
+            id="receipt_payment"
+            checked={payload.type === "receipt_payment"}
+            onChange={() => setPayload({ ...payload, type: "receipt_payment" })}
+          />
+          <CheckBox
+            label="Suspence"
+            description=""
+            name="type"
+            id="suspence_payment"
+            checked={payload.type === "suspence_payment"}
+            onChange={() =>
+              setPayload({ ...payload, type: "suspence_payment" })
+            }
+          />
+          <CheckBox
+            label="Check"
+            description=""
+            name="type"
+            id="check_payment"
+            checked={payload.type === "check_payment"}
+            onChange={() => setPayload({ ...payload, type: "check_payment" })}
+          />
+        </div>
+        <div className="w-full px-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 lg:grid-cols-5 gap-4  p-2 rounded-lg">
+          <SelectInputFloating
+            label="Requested By"
+            id="requestedBy"
+            name="requestedBy"
+            type=""
+            placeholder=" "
+            value={payload.requestedBy}
+            onChange={handleCommonChange}
+            onClick={fetchUsers}
+            required={true}
+            data={users}
+            datakeys="_id"
+            datavalues="_id"
+            datalabeling="name"
+          />
 
-            if (
-              !entry.quantity ||
-              isNaN(Number(entry.quantity)) ||
-              Number(entry.quantity) <= 0
-            ) {
-              setQuantityError("Quantity must be greater than 0");
-              hasError = true;
-            } else {
-              setQuantityError("");
+          <SelectInputFloating
+            label="Payment Category"
+            id="paymentType"
+            name="paymentType"
+            type=""
+            placeholder=" "
+            value={payload.paymentType}
+            onChange={handleCommonChange}
+            data={paymentTypesModel}
+            datakeys="value"
+            datavalues="value"
+            datalabeling="label"
+            required={true}
+          />
+
+          <InputFloating
+            label="Amount"
+            name="amount"
+            id="amount"
+            type="number"
+            value={payload.amount}
+            onChange={handleEntryChange}
+            required
+          />
+
+          <InputFloating
+            label="Recipt Reference"
+            name="recept_reference"
+            id="recept_reference"
+            type="text"
+            value={payload.recept_reference}
+            onChange={handleEntryChange}
+            required
+          />
+          <InputFloating
+            label="Paid To"
+            name="to"
+            id="to"
+            type="text"
+            value={payload.to}
+            onChange={handleEntryChange}
+            required={payload.paymentType === "receipt_payment"}
+          />
+
+          {/* Fields for suspence_payment */}
+
+          <InputFloating
+            label="Quantity"
+            name="quantity"
+            id="quantity"
+            type="number"
+            value={payload.quantity}
+            onChange={handleEntryChange}
+            required={false}
+          />
+          <InputFloating
+            label="Reason"
+            name="reason"
+            id="reason"
+            type="text"
+            value={payload.reason}
+            onChange={handleEntryChange}
+            required
+          />
+
+          <DateInputFloating
+            label="Requested At"
+            name="requestedAt"
+            id="requestedAt"
+            value={
+              payload.requestedAt
+                ? new Date(payload.requestedAt).toISOString().split("T")[0]
+                : ""
             }
-            if (hasError) {
-              e.preventDefault();
-              return;
-            }
-            // Compose payload for the entry
-            const formEntry = {
-              ...entry,
-              status: "requested",
-              type: paymentType,
-              createdBy: auth?.id,
-              requestedBy: commonFields.requestedBy,
-              requestedAt: commonFields.requestedAt,
-              paymentCategory: commonFields.paymentCategory,
-            };
-            // Call onSubmit with the single entry in an array
-            e.preventDefault();
-            handleSubmit([formEntry], e);
-            resetForm();
-          }}
-          className=""
+            onChange={(e) => {
+              const dateValue = e.target.value;
+              // Convert YYYY-MM-DD to ISO string (midnight UTC)
+              setPayload((prev) => ({
+                ...prev,
+                requestedAt: dateValue ? new Date(dateValue).toISOString() : "",
+              }));
+            }}
+            required
+          />
+        </div>
+      </div>
+
+      {/* Shared Action, Amount, Description fields and table */}
+      {payload.paymentType === "vehicleMaintenance" && (
+        <div
+          className={`mt-4 my-4 p-2 border border-blue-100 rounded-xl shadow-sm w-full bg-white`}
         >
-          {/* Common Fields */}
-          <div className="flex flex-col gap-4 bg-[#FFFFFF] rounded-lg p-4 mb-2 border border-gray-100">
-            <div className="flex justify-between items-center">
-              <div className="flex items-start justify-items-start gap-3">
-                <div className="flex-1 mb-2">
-                  <select
-                    name="requestedBy"
-                    value={commonFields.requestedBy}
-                    onChange={handleCommonChange}
-                    className="flex-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
-                    required
-                    disabled={isTransporter}
-                  >
-                    <option value="">Select User</option>
-                    {users.map((user) => (
-                      <option key={user._id} value={user._id}>
-                        {user.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex-1 mb-2">
-                  <input
-                    type="date"
-                    name="requestedAt"
-                    value={commonFields.requestedAt}
-                    onChange={handleCommonChange}
-                    className="flex-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
-                    required
-                  />
-                </div>
-                <div className="flex-1 mb-2">
-                  <select
-                    name="paymentCategory"
-                    value={commonFields.paymentCategory}
-                    onChange={handleCommonChange}
-                    className="flex-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
-                    required
-                  >
-                    <option value="">Select Category</option>
-                    {paymentTypesModel.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <button
-                type="submit"
-                className="flex items-center gap-1 bg-white text-black font-bold px-1 py-2 rounded-lg transition border border-gray-300 cursor-pointer hover:bg-[#EEEFE0] disabled:opacity-60"
-                disabled={submitting}
+          <h2 className="text-md font-extrabold flex items-center gap-2 text-[#02733E]">
+            Vehicle Maintenance Info (Spare Part)
+          </h2>
+          <div className="flex justify-between flex-wrap gap-1 ">
+            {/* Only show vehicle select if vehicleMaintenance */}
+
+            <div className="flex-1 flex flex-col max-w-[150px] min-w-[100px]">
+              <label className="text-[#444444] text-sm font-bold ">
+                Vehicle
+              </label>
+              <select
+                name="vehicleId"
+                value={vehicleRow.vehicleId}
+                onChange={handleVehicleRowChange}
+                className="border border-gray-300 rounded py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
               >
-                <FilePlus size={20} /> {submitting ? "Saving..." : "Save"}
-              </button>
+                <option value="">Select Vehicle</option>
+                {vehicles.map((vehicle) => (
+                  <option key={vehicle._id} value={vehicle._id}>
+                    {vehicle.plate}
+                    {vehicle.model ? ` - ${vehicle.model}` : ""}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="flex  flex-col bg-white border-2 border-blue-100 rounded-xl shadow-sm p-5 transition hover:shadow-lg">
-              <div className="flex justify-between  group">
-                {/* Fields for receipt_payment */}
-                <div
-                  className={`gap-2 mb-2 ${
-                    paymentType === "suspence_payment" ? "hidden" : ""
-                  }`}
-                >
-                  <div className="relative z-0 w-full mb-5 group">
-                    <input
-                      type="number"
-                      name="amount"
-                      value={entry.amount}
-                      onChange={handleEntryChange}
-                      placeholder=" "
-                      className="block py-2 px-0 w-full text-sm text-black bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-[#02733E] peer"
-                      required={paymentType === "receipt_payment"}
-                    />
-                    <label
-                      htmlFor="amount"
-                      className="peer-focus:font-medium absolute text-lg text-black font-bold duration-300 transform -translate-y-6 scale-75 top-1 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-[#02733E] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                    >
-                      Amount
-                    </label>
-                  </div>
-                </div>
-
-                <div
-                  className={`gap-2 mb-2 ${
-                    paymentType === "suspence_payment" ? "hidden" : ""
-                  }`}
-                >
-                  <div className="relative z-0 w-full mb-5 group">
-                    <input
-                      type="text"
-                      name="recept_reference"
-                      value={entry.recept_reference || ""}
-                      onChange={handleEntryChange}
-                      placeholder=""
-                      className="block py-2.5 px-0 w-full text-sm text-black bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-[#02733E] peer"
-                      required={paymentType === "receipt_payment"}
-                    />
-                    <label
-                      htmlFor="amount"
-                      className="peer-focus:font-medium absolute text-lg text-black font-bold duration-300 transform -translate-y-6 scale-75 top-1 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-[#02733E] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                    >
-                      Reference
-                    </label>
-                  </div>
-                </div>
-                <div
-                  className={`gap-2 mb-2 ${
-                    paymentType === "suspence_payment" ? "hidden" : ""
-                  }`}
-                >
-                  <div className="relative z-0 w-full mb-5 group">
-                    <input
-                      type="text"
-                      name="to"
-                      value={entry.to}
-                      onChange={handleEntryChange}
-                      placeholder=""
-                      className="block py-2.5 px-0 w-full text-sm text-black bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-[#02733E] peer"
-                      required={paymentType === "receipt_payment"}
-                    />
-                    <label
-                      htmlFor="amount"
-                      className="peer-focus:font-medium absolute text-lg text-black font-bold duration-300 transform -translate-y-6 scale-75 top-1 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-[#02733E] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                    >
-                      Paid To
-                    </label>
-                  </div>
-                </div>
-
-                {/* Fields for suspence_payment */}
-
-                <div
-                  className={`gap-2 mb-2 ${
-                    paymentType === "receipt_payment" ? "hidden" : ""
-                  }`}
-                >
-                  <div className="relative z-0 w-full mb-5 group">
-                    <input
-                      type="number"
-                      name="suspenceAmount"
-                      value={entry.suspenceAmount}
-                      onChange={handleEntryChange}
-                      placeholder=" "
-                      className="block py-2.5 px-0 w-full text-sm text-black bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-[#02733E] peer"
-                      required={paymentType === "suspence_payment"}
-                    />
-                    <label
-                      htmlFor="suspenceAmount"
-                      className="peer-focus:font-medium absolute text-lg text-black font-bold duration-300 transform -translate-y-6 scale-75 top-1 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-[#02733E] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                    >
-                      Amount
-                    </label>
-                  </div>
-                </div>
-                <div className={`gap-2 mb-2`}>
-                  <div className="relative z-0 w-full mb-5 group">
-                    <input
-                      type="number"
-                      name="quantity"
-                      value={entry.quantity || ""}
-                      onChange={handleEntryChange}
-                      placeholder=""
-                      className="block py-2.5 px-0 w-full text-sm text-black bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-[#02733E] peer"
-                      required
-                    />
-                    <label
-                      htmlFor="suspenceAmount"
-                      className="peer-focus:font-medium absolute text-lg text-black font-bold duration-300 transform -translate-y-6 scale-75 top-1 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-[#02733E] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                    >
-                      Quantity
-                    </label>
-                    {quantityError && (
-                      <div className="text-red-500 text-xs mt-1">
-                        {quantityError}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className={`gap-2 mb-2 `}>
-                  <div className="relative z-0 w-full mb-5 group">
-                    <input
-                      type="text"
-                      name="reason"
-                      value={entry.reason}
-                      onChange={handleEntryChange}
-                      placeholder=""
-                      className="block py-2.5 px-0 w-full text-sm text-black bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-[#02733E] peer"
-                      required
-                    />
-                    <label
-                      htmlFor="suspenceAmount"
-                      className="peer-focus:font-medium absolute text-lg text-black font-bold duration-300 transform -translate-y-6 scale-75 top-1 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-[#02733E] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                    >
-                      Reason
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* Shared Action, Amount, Description fields and table */}
-              {commonFields.paymentCategory === "vehicleMaintenance" && (
-              <div
-                className={`mt-4 my-4 p-2 border border-blue-100 rounded-xl shadow-sm w-full bg-white`}
+            <div className="flex-1 flex flex-col max-w-[100px] min-w-[100px]">
+              <label className="text-[#444444] text-sm font-bold ">KM</label>
+              <input
+                type="number"
+                name="km"
+                value={vehicleRow.km}
+                onChange={handleVehicleRowChange}
+                className="border border-gray-300 rounded py-1  text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
+                placeholder="Killo Meter "
+              />
+            </div>
+            <div className="flex-1 flex flex-col max-w-[150px] min-w-[100px]">
+              <label className="text-[#444444] text-sm font-bold ">
+                Parts Category
+              </label>
+              <select
+                name="vehicleComponentCategory"
+                value={vehicleRow.vehicleComponentCategory}
+                onChange={handleVehicleRowChange}
+                className="border border-gray-300 rounded  py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
               >
-                <h2 className="text-md font-extrabold flex items-center gap-2 text-[#02733E]">
-                  Vehicle Maintenance Info (Spare Part)
-                </h2>
-                <div className="flex justify-between flex-wrap gap-1 ">
-                  {/* Only show vehicle select if vehicleMaintenance */}
+                <option value="">Select Parts Category</option>
+                {vehicleComponentsCatagory.map((item) => (
+                  <option key={item.key} value={item.key}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1 flex flex-col max-w-[150px]  min-w-[100px]">
+              <label className="text-[#444444] text-sm font-bold ">Parts</label>
+              <select
+                name="vehicleComponents"
+                value={vehicleRow.vehicleComponents}
+                onChange={handleVehicleRowChange}
+                className="border border-gray-300 rounded py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
+              >
+                <option value="">Select Parts</option>
+                {filteredVehicleComponents.map((item) => (
+                  <option key={item.key} value={item.key}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                  <div
-                    className="flex-1 flex flex-col max-w-[150px] min-w-[100px]"
-                  >
-                    <label className="text-[#444444] text-sm font-bold ">
+            <div className="flex-1 flex flex-col max-w-[120px] min-w-[100px]">
+              <label className="text-[#444444] text-sm font-bold ">
+                Action
+              </label>
+              <select
+                name="action"
+                value={vehicleRow.action}
+                onChange={handleVehicleRowChange}
+                className="border border-gray-300 rounded py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
+              >
+                <option value="">Select Action</option>
+                {transactionAction.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1 flex flex-col max-w-[100px] min-w-[100px]">
+              <label className="text-[#444444] text-sm font-bold ">
+                Quantity
+              </label>
+              <input
+                type="number"
+                name="qty"
+                value={vehicleRow.qty}
+                onChange={handleVehicleRowChange}
+                className="border border-gray-300 rounded py-1  text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
+                placeholder="Amount "
+              />
+            </div>
+            <div className="flex-1 flex flex-col max-w-[100px] min-w-[100px]">
+              <label className="text-[#444444] text-sm font-bold ">
+                Amount
+              </label>
+              <input
+                type="number"
+                name="amount"
+                value={vehicleRow.amount}
+                onChange={handleVehicleRowChange}
+                className="border border-gray-300 rounded py-1  text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
+                placeholder="Amount "
+              />
+            </div>
+            <div className="flex-1 flex flex-col max-w-[200px] min-w-[100px]">
+              <label className="text-[#444444] text-sm font-bold ">
+                Description
+              </label>
+              <input
+                type="text"
+                name="description"
+                value={vehicleRow.description}
+                onChange={handleVehicleRowChange}
+                className="border border-gray-300 rounded py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
+                placeholder="Description"
+              />
+            </div>
+            <button
+              className="mt-5 px-4 py-1  text-blue-700 rounded hover:bg-gray-100 transition font-bold border border-blue-700 cursor-pointer"
+              onClick={handleAddVehicleRow}
+              type="button"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Table of added rows */}
+      {vehicleRows.length > 0 && (
+        <div className="overflow-x-auto mb-4">
+          <table className="min-w-full border border-gray-200 rounded">
+            <thead>
+              <tr className="bg-gray-50">
+                {payload.paymentType === "vehicleMaintenance" && (
+                  <>
+                    <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
                       Vehicle
-                    </label>
-                    <select
-                      name="vehicleId"
-                      value={vehicleRow.vehicleId}
-                      onChange={handleVehicleRowChange}
-                      className="border border-gray-300 rounded py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
-                    >
-                      <option value="">Select Vehicle</option>
-                      {vehicles.map((vehicle) => (
-                        <option key={vehicle._id} value={vehicle._id}>
-                          {vehicle.plate}
-                          {vehicle.model ? ` - ${vehicle.model}` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex-1 flex flex-col max-w-[100px] min-w-[100px]">
-                    <label className="text-[#444444] text-sm font-bold ">
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
                       KM
-                    </label>
-                    <input
-                      type="number"
-                      name="km"
-                      value={vehicleRow.km}
-                      onChange={handleVehicleRowChange}
-                      className="border border-gray-300 rounded py-1  text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
-                      placeholder="Killo Meter "
-                    />
-                    
-                  </div>
-                  <div
-                    className="flex-1 flex flex-col max-w-[150px] min-w-[100px]"
-                  >
-                    <label className="text-[#444444] text-sm font-bold ">
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
                       Parts Category
-                    </label>
-                    <select
-                      name="vehicleComponentCategory"
-                      value={vehicleRow.vehicleComponentCategory}
-                      onChange={handleVehicleRowChange}
-                      className="border border-gray-300 rounded  py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
-                    >
-                      <option value="">Select Parts Category</option>
-                      {vehicleComponentsCatagory.map((item) => (
-                        <option key={item.key} value={item.key}>
-                          {item.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div
-                    className="flex-1 flex flex-col max-w-[150px]  min-w-[100px]"
-                  >
-                    <label className="text-[#444444] text-sm font-bold ">
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
                       Parts
-                    </label>
-                    <select
-                      name="vehicleComponents"
-                      value={vehicleRow.vehicleComponents}
-                      onChange={handleVehicleRowChange}
-                      className="border border-gray-300 rounded py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
-                    >
-                      <option value="">Select Parts</option>
-                      {filteredVehicleComponents.map((item) => (
-                        <option key={item.key} value={item.key}>
-                          {item.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                    </th>
+                  </>
+                )}
 
-                  <div className="flex-1 flex flex-col max-w-[120px] min-w-[100px]">
-                    <label className="text-[#444444] text-sm font-bold ">
-                      Action
-                    </label>
-                    <select
-                      name="action"
-                      value={vehicleRow.action}
-                      onChange={handleVehicleRowChange}
-                      className="border border-gray-300 rounded py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
-                    >
-                      <option value="">Select Action</option>
-                      {transactionAction.map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {item.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex-1 flex flex-col max-w-[100px] min-w-[100px]">
-                    <label className="text-[#444444] text-sm font-bold ">
-                      Quantity
-                    </label>
-                    <input
-                      type="number"
-                      name="qty"
-                      value={vehicleRow.qty}
-                      onChange={handleVehicleRowChange}
-                      className="border border-gray-300 rounded py-1  text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
-                      placeholder="Amount "
-                    />
-       
-                  </div>
-                  <div className="flex-1 flex flex-col max-w-[100px] min-w-[100px]">
-                    <label className="text-[#444444] text-sm font-bold ">
-                      Amount
-                    </label>
-                    <input
-                      type="number"
-                      name="amount"
-                      value={vehicleRow.amount}
-                      onChange={handleVehicleRowChange}
-                      className="border border-gray-300 rounded py-1  text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white "
-                      placeholder="Amount "
-                    />
-       
-                  </div>
-                  <div className="flex-1 flex flex-col max-w-[200px] min-w-[100px]">
-                    <label className="text-[#444444] text-sm font-bold ">
-                      Description
-                    </label>
-                    <input
-                      type="text"
-                      name="description"
-                      value={vehicleRow.description}
-                      onChange={handleVehicleRowChange}
-                      className="border border-gray-300 rounded py-1 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition bg-white"
-                      placeholder="Description"
-                    />
-                  </div>
-                  <button
-                    className="mt-5 px-4 py-1  text-blue-700 rounded hover:bg-gray-100 transition font-bold border border-blue-700 cursor-pointer"
-                    onClick={handleAddVehicleRow}
-                    type="button"
-                  >
-                    Add
-                  </button>
-                </div>
-              </div>)}
-            </div>
-            {/* Table of added rows */}
-            {vehicleRows.length > 0 && (
-              <div className="overflow-x-auto mb-4">
-                <table className="min-w-full border border-gray-200 rounded">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      {commonFields.paymentCategory ===
-                        "vehicleMaintenance" && (
-                        <>
-                          <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
-                            Vehicle
-                          </th>
-                          <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
-                            KM
-                          </th>
-                          <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
-                            Parts Category
-                          </th>
-                          <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
-                            Parts
-                          </th>
-                        </>
-                      )}
-                      
-                      <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
+                <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
+                  Action
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
+                  Description
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
+                  Quantity
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
+                  Amount
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
+                  Remove
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {vehicleRows.map((row, idx) => {
+                return (
+                  <tr key={idx} className="border-t">
+                    {payload.paymentType === "vehicleMaintenance" && (
+                      <>
+                        <td className="px-4 py-2 text-sm">
+                          {(() => {
+                            const vehicle = vehicles.find(
+                              (v) => v._id === row.vehicleId
+                            );
+                            return vehicle
+                              ? `${vehicle.plate}${
+                                  vehicle.model ? " - " + vehicle.model : ""
+                                }`
+                              : "";
+                          })()}
+                        </td>
+                        <td className="px-4 py-2 text-sm">{row.km}</td>
+                        <td className="px-4 py-2 text-sm">
+                          {(() => {
+                            const cat = vehicleComponentsCatagory.find(
+                              (c) => c.key === row.vehicleComponentCategory
+                            );
+                            return cat ? cat.label : "";
+                          })()}
+                        </td>
+                        <td className="px-4 py-2 text-sm">
+                          {(() => {
+                            const part = vehicleComponents.find(
+                              (p) => p.key === row.vehicleComponents
+                            );
+                            return part ? part.label : "";
+                          })()}
+                        </td>
+                      </>
+                    )}
+                    <td className="px-4 py-2 text-sm">{row.action}</td>
+                    <td className="px-4 py-2 text-sm">{row.description}</td>
+                    <td className="px-4 py-2 text-sm">{row.qty}</td>
+                    <td className="px-4 py-2 text-sm">{row.amount}</td>
+                    <td className="px-4 py-2 text-sm">
+                      <button
+                        type="button"
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => handleRemoveVehicleRow(idx)}
+                        title="Remove"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            {/* Total row */}
+            <tfoot>
+              <tr className="bg-blue-100 font-bold">
+                {/* Adjust colspan based on the number of columns before qty and amount */}
+                <td
+                  colSpan={payload.paymentType === "vehicleMaintenance" ? 6 : 3}
+                  className="px-4 py-2 text-right"
+                >
+                  Total
+                </td>
+                <td className="px-4 py-2 text-sm">
+                  {vehicleRows.reduce(
+                    (sum, row) => sum + Number(row.qty || 0),
+                    0
+                  )}
+                </td>
+                <td className="px-4 py-2 text-sm">
+                  {vehicleRows.reduce(
+                    (sum, row) => sum + Number(row.amount || 0),
+                    0
+                  )}
+                </td>
+                <td className="px-4 py-2"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+      <hr className="border-[#D9A404] border-1" />
+
+      <div className="flex flex-col">
+        <div className="-m-1.5 overflow-x-auto">
+          <div className="p-1.5 min-w-full inline-block align-middle">
+            <div className="overflow-hidden h-[290px] overflow-y-auto border border-gray-200 dark:border-neutral-700">
+              {loading ? (
+                <LoadingComponent />
+              ) : (
+                <table className="min-w-full table-fixed divide-y divide-gray-200 dark:divide-neutral-700">
+                  <thead className="border border-gray-400 dark:border-neutral-700">
+                    <tr class="divide-x divide-gray-200 dark:divide-neutral-700 border border-b border-gray-600 dark:border-neutral-700 bg-gray-100 dark:bg-neutral-800">
+                      <th
+                        scope="col"
+                        className="sticky top-0 z-10 bg-white dark:bg-neutral-800 px-2 py-1 text-end text-xs font-semibold text-black uppercase dark:text-neutral-500 border border-gray-400 dark:border-neutral-700 w-16 max-w-[4rem] truncate"
+                      >
+                        Status
+                      </th>
+                      <th
+                        scope="col"
+                        className="sticky top-0 z-10 bg-white dark:bg-neutral-800 px-2 py-1 text-start text-xs font-semibold text-black uppercase dark:text-neutral-500 border border-gray-400 dark:border-neutral-700 w-24 max-w-[8rem] truncate"
+                      >
+                        TO
+                      </th>
+                      <th
+                        scope="col"
+                        className="sticky top-0 z-10 bg-white dark:bg-neutral-800 px-2 py-1 text-start text-xs font-semibold text-black uppercase dark:text-neutral-500 border border-gray-400 dark:border-neutral-700 w-32 max-w-[10rem] truncate"
+                      >
+                        REASON
+                      </th>
+
+                      <th
+                        scope="col"
+                        className="sticky top-0 z-10 bg-white dark:bg-neutral-800 px-2 py-1 text-start text-xs font-semibold text-black uppercase dark:text-neutral-500 border border-gray-400 dark:border-neutral-700 w-20 max-w-[6rem] truncate"
+                      >
+                        AMOUNT
+                      </th>
+                      <th
+                        scope="col"
+                        className="sticky top-0 z-10 bg-white dark:bg-neutral-800 px-2 py-1 text-start text-xs font-semibold text-black uppercase dark:text-neutral-500 border border-gray-400 dark:border-neutral-700 w-20 max-w-[6rem] truncate"
+                      >
+                        TYPE
+                      </th>
+                      <th
+                        scope="col"
+                        className="sticky top-0 z-10 bg-white dark:bg-neutral-800 px-2 py-1 text-start text-xs font-semibold text-black uppercase dark:text-neutral-500 border border-gray-400 dark:border-neutral-700 w-24 max-w-[8rem] truncate"
+                      >
+                        Date
+                      </th>
+
+                      <th
+                        scope="col"
+                        className="sticky top-0 z-10 bg-white dark:bg-neutral-800 px-2 py-1 text-start text-xs font-semibold text-black uppercase dark:text-neutral-500 border border-gray-400 dark:border-neutral-700 w-24 max-w-[8rem] truncate"
+                      >
+                        Reference
+                      </th>
+                      <th
+                        scope="col"
+                        className="sticky top-0 z-10 bg-white dark:bg-neutral-800 px-2 py-1 text-start text-xs font-semibold text-black uppercase dark:text-neutral-500 border border-gray-400 dark:border-neutral-700 w-16 max-w-[4rem] truncate"
+                      >
+                        PV NO.
+                      </th>
+                      <th
+                        scope="col"
+                        className="sticky top-0 z-10 bg-white dark:bg-neutral-800 px-2 py-1 text-end text-xs font-semibold text-black uppercase dark:text-neutral-500 border border-gray-400 dark:border-neutral-700 w-16 max-w-[4rem] truncate"
+                      >
                         Action
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
-                        Description
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
-                        Quantity
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
-                        Amount
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-bold text-gray-700">
-                        Remove
                       </th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {vehicleRows.map((row, idx) => {
-                      return (
-                        <tr key={idx} className="border-t">
-                          {commonFields.paymentCategory ===
-                            "vehicleMaintenance" && (
-                            <>
-                              <td className="px-4 py-2 text-sm">
-                                {(() => {
-                                  const vehicle = vehicles.find(
-                                    (v) => v._id === row.vehicleId
-                                  );
-                                  return vehicle
-                                    ? `${vehicle.plate}${
-                                        vehicle.model
-                                          ? " - " + vehicle.model
-                                          : ""
-                                      }`
-                                    : "";
-                                })()}
-                              </td>
-                              <td className="px-4 py-2 text-sm">
-                                {row.km}
-                              </td>
-                              <td className="px-4 py-2 text-sm">
-                                {(() => {
-                                  const cat = vehicleComponentsCatagory.find(
-                                    (c) =>
-                                      c.key === row.vehicleComponentCategory
-                                  );
-                                  return cat ? cat.label : "";
-                                })()}
-                              </td>
-                              <td className="px-4 py-2 text-sm">
-                                {(() => {
-                                  const part = vehicleComponents.find(
-                                    (p) => p.key === row.vehicleComponents
-                                  );
-                                  return part ? part.label : "";
-                                })()}
-                              </td>
-                            </>
+                  <tbody className="divide-y divide-gray-200 dark:divide-neutral-700">
+                    {transactions.map((item, index) => (
+                      <tr
+                        key={index}
+                        className={
+                          "odd:bg-gray-50 divide-x even:bg-white dark:odd:bg-neutral-800 dark:even:bg-neutral-900 hover:bg-yellow-100 dark:hover:bg-neutral-700 border border-gray-400 dark:border-neutral-700"
+                        }
+                      >
+                        <td className="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-neutral-200 border border-gray-400 dark:border-neutral-700 w-20 max-w-[6rem] truncate overflow-hidden">
+                          {item.status === "paid" && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
+                              <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                              Paid
+                            </span>
                           )}
-                          <td className="px-4 py-2 text-sm">{row.action}</td>
-                          <td className="px-4 py-2 text-sm">
-                            {row.description}
-                          </td>
-                          <td className="px-4 py-2 text-sm">{row.qty}</td>
-                          <td className="px-4 py-2 text-sm">{row.amount}</td>
-                          <td className="px-4 py-2 text-sm">
-                            <button
-                              type="button"
-                              className="text-red-500 hover:text-red-700"
-                              onClick={() => handleRemoveVehicleRow(idx)}
-                              title="Remove"
+                          {item.status === "requested" && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200">
+                              <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1"></div>
+                              Requested
+                            </span>
+                          )}
+                          {item.status === "approved" && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full mr-1"></div>
+                              Approved
+                            </span>
+                          )}
+                          {item.status === "rejected" && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
+                              <div className="w-2 h-2 bg-red-500 rounded-full mr-1"></div>
+                              Rejected
+                            </span>
+                          )}
+                          {item.status === "suspence" && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200">
+                              <div className="w-2 h-2 bg-purple-500 rounded-full mr-1"></div>
+                              Suspence
+                            </span>
+                          )}
+                          {item.status === "prepared" && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                              <div className="w-2 h-2 bg-indigo-500 rounded-full mr-1"></div>
+                              Prepared
+                            </span>
+                          )}
+                          {![
+                            "paid",
+                            "requested",
+                            "approved",
+                            "rejected",
+                            "suspence",
+                            "prepared",
+                          ].includes(item.status) && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800 border border-gray-200">
+                              <div className="w-2 h-2 bg-gray-500 rounded-full mr-1"></div>
+                              {item.status || "Unknown"}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-neutral-200 border border-gray-400 dark:border-neutral-700 w-24 max-w-[8rem] truncate overflow-hidden">
+                          {item.to}
+                        </td>
+                        <td className="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-neutral-200 border border-gray-400 dark:border-neutral-700 w-32 max-w-[10rem] truncate overflow-hidden">
+                          {item.reason}
+                        </td>
+
+                        <td className="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-neutral-200 border border-gray-400 dark:border-neutral-700 w-20 max-w-[6rem] truncate overflow-hidden">
+                          {item.amount ? item.amount : item.suspenceAmount}
+                        </td>
+                        <td className="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-neutral-200 border border-gray-400 dark:border-neutral-700 w-20 max-w-[6rem] truncate overflow-hidden">
+                          {item.type}
+                        </td>
+                        <td className="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-neutral-200 border border-gray-400 dark:border-neutral-700 w-24 max-w-[8rem] truncate overflow-hidden">
+                          {formatDate(item.createdAt)}
+                        </td>
+
+                        <td className="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-neutral-200 border border-gray-400 dark:border-neutral-700 w-24 max-w-[8rem] truncate overflow-hidden">
+                          {editingRowId === item._id ? (
+                            <input
+                              className="border-green-600 border-2 rounded px-1 py-0.5 w-full text-xs"
+                              value={editValues.recept_reference || ""}
+                              onChange={(e) =>
+                                setEditValues((v) => ({
+                                  ...v,
+                                  recept_reference: e.target.value,
+                                }))
+                              }
+                            />
+                          ) : (
+                            <div
+                              className="cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
+                              onClick={() => {
+                                setEditingRowId(item._id);
+                                setEditValues({
+                                  recept_reference: item.recept_reference || "",
+                                });
+                              }}
                             >
-                              <Trash2 size={18} />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                              {item.recept_reference || "N/A"}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-neutral-200 border border-gray-400 dark:border-neutral-700 w-16 max-w-[4rem] truncate overflow-hidden">
+                          {item.serialNumber || item.checkSerialNumber || "N/A"}
+                        </td>
+                        <td className="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-neutral-200 border border-gray-400 dark:border-neutral-700 w-16 max-w-[4rem] truncate overflow-hidden">
+                          {editingRowId === item._id ? (
+                            <div className="flex gap-1">
+                              <button
+                                className="p-1 rounded bg-green-500 text-white hover:bg-green-600"
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(
+                                      `/api/checkTransaction/checkPrepare/${item._id}`,
+                                      {
+                                        method: "PUT",
+                                        headers: {
+                                          "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify({
+                                          recept_reference:
+                                            editValues.recept_reference,
+                                        }),
+                                      }
+                                    );
+                                    const data = await res.json();
+                                    if (res.ok && data.success) {
+                                      toast.success(
+                                        "Reference updated successfully."
+                                      );
+                                      setData((data) =>
+                                        data.map((d) =>
+                                          d._id === item._id
+                                            ? {
+                                                ...d,
+                                                recept_reference:
+                                                  editValues.recept_reference,
+                                              }
+                                            : d
+                                        )
+                                      );
+                                      setEditingRowId(null);
+                                      setEditValues({});
+                                    } else {
+                                      toast.error(
+                                        data.message || "Failed to update."
+                                      );
+                                    }
+                                  } catch (err) {
+                                    toast.error("Failed to update.");
+                                  }
+                                }}
+                              >
+                                <Check className="w-3 h-3" />
+                              </button>
+                              <button
+                                className="p-1 rounded bg-red-500 text-white hover:bg-red-600"
+                                onClick={() => {
+                                  setEditingRowId(null);
+                                  setEditValues({});
+                                }}
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  className="p-1 rounded hover:bg-muted transition cursor-pointer"
+                                  title="Actions"
+                                >
+                                  <Ellipsis />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                {item.checkRequestId?.status == "prepared" && (
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setEditingRowId(item._id);
+                                      setEditValues({
+                                        recept_reference: item.recept_reference,
+                                      });
+                                    }}
+                                  >
+                                    <SquareCheck
+                                      enableBackground={true}
+                                      color="green"
+                                      className="w-4 h-4 mr-2 "
+                                    />{" "}
+                                    <span className="text-green-600 font-semibold">
+                                      {" "}
+                                      Pay
+                                    </span>
+                                  </DropdownMenuItem>
+                                )}
+
+                                {item.type == "check_payment" ||
+                                  (item.type == "bank_transfer" && (
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        router.push(`/checks/${item._id}`)
+                                      }
+                                    >
+                                      <NotebookPen className="w-4 h-4 mr-2" />{" "}
+                                      {item.checkRequestId?.status == "prepared"
+                                        ? "Edit"
+                                        : "Prepare"}
+                                    </DropdownMenuItem>
+                                  ))}
+
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    window.open(
+                                      `/transactions/${item._id}`,
+                                      "_blank"
+                                    );
+                                  }}
+                                >
+                                  <Eye className="w-4 h-4 mr-2" /> View Detail
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    window.open(
+                                      `/checks/printInvoice/${item._id}`,
+                                      "_blank"
+                                    )
+                                  }
+                                >
+                                  <Printer className="w-4 h-4 mr-2" /> Print
+                                  Invoice
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
-                  {/* Total row */}
-                  <tfoot>
-                    <tr className="bg-blue-100 font-bold">
-                      {/* Adjust colspan based on the number of columns before qty and amount */}
-                      <td colSpan={commonFields.paymentCategory === "vehicleMaintenance" ? 6 : 3} className="px-4 py-2 text-right">Total</td>
-                      <td className="px-4 py-2 text-sm">
-                        {vehicleRows.reduce((sum, row) => sum + Number(row.qty || 0), 0)}
-                      </td>
-                      <td className="px-4 py-2 text-sm">
-                        {vehicleRows.reduce((sum, row) => sum + Number(row.amount || 0), 0)}
-                      </td>
-                      <td className="px-4 py-2"></td>
-                    </tr>
-                  </tfoot>
                 </table>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </form>
-      )}
-      {/* Show error message if present */}
-      {formError && toast.error(formError)}
+        </div>
+      </div>
     </div>
   );
 }

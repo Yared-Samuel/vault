@@ -4,6 +4,7 @@ import {
   transactionTypesModel,
 } from "@/lib/constants";
 import mongoose, { Schema } from "mongoose";
+import CheckRequest from "./CheckRequest";
 
 const TransactionSchema = new Schema(
   {
@@ -60,7 +61,8 @@ const TransactionSchema = new Schema(
     rejectedReason: { type: String },
 
     // when status is paid
-    serialNumber: { type: Number},
+    serialNumber: { type: Number },
+    checkSerialNumber: { type: Number },
     quantity: { type: Number, default: 1 },
 
     // For transporter only
@@ -75,6 +77,12 @@ const TransactionSchema = new Schema(
     vehicleTransaction: {
       type: Schema.Types.ObjectId,
       ref: "VehicleTransaction",
+    },
+    // for bank transfer
+    bank: {
+      type: String,
+      enum: ["awash", "dashin", "cbe", "united"],
+      required: false,
     },
   },
   { timestamps: true }

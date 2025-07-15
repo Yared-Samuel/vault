@@ -170,7 +170,7 @@ export default function CashPage() {
 
   // Memoize filteredTransactions
   const filteredTransactions = useMemo(() => {
-    let filtered = transactions.filter((tx) => filter === "all" || tx.status === filter);
+    let filtered = transactions.filter((tx) => filter === "all" || tx.status === filter && !tx.checkSerialNumber);
     const { startDate, endDate } = dateRange[0];
     if (startDate) {
       filtered = filtered.filter(tx => new Date(tx.requestedAt) >= new Date(startDate));
@@ -273,9 +273,8 @@ export default function CashPage() {
         accessorKey: "serialNumber",
 
         cell: (info) => (
-          <div>
-            <div>{info.row.original.serialNumber ?? ""}</div>
-          </div>
+         <> { info.row.original.serialNumber ? String(info.row.original.serialNumber).padStart(6, '0') : info.row.original.checkSerialNumber ? String(info.row.original.checkSerialNumber).padStart(6, '0') : '-'}
+         </>
         ),
         enableResizing: true,
       },

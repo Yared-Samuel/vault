@@ -9,6 +9,7 @@ import React, { useState } from "react";
 import AppHeader from "@/components/ui/header";
 import Image from "next/image";
 
+
 export default function App({ Component, pageProps }) {
   const router = useRouter();
   const isLoginPage = router.pathname === "/";
@@ -18,7 +19,10 @@ export default function App({ Component, pageProps }) {
     router.pathname === '/cash/invoice/print' ||
     router.pathname === '/cash/suspenceInvoice/[id]' ||
     router.pathname === '/fuel-transactions/report' ||
-    router.pathname === '/reports/paymentReport/print';
+    router.pathname === '/reports/paymentReport/print' ||
+    router.pathname === '/checks/invoice/[id]' ||
+    router.pathname === '/checks/printInvoice/[id]' ||
+    router.pathname === '/print-attachment/storeInOut/[id]';
   const [collapsed, setCollapsed] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -32,7 +36,7 @@ export default function App({ Component, pageProps }) {
         <Component {...pageProps} />
       ) : (
         <>
-            <AppHeader />
+            {/* <AppHeader /> */}
           
           <div className="flex">
           <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
@@ -58,8 +62,8 @@ export default function App({ Component, pageProps }) {
               <Image src="/open-side.svg" alt="expand" width={20} height={20} />
             </button>
           )}
-          <main className="flex  px-2 w-full h-screen overflow-y-auto">
-            <Toaster position="top-right" richColors size="lg" />
+          <main className="flex px-2 w-full overflow-x-hidden">
+            <Toaster position="top-right" richColors size="sm" />
             <Component {...pageProps} />
           </main>
           </div>
